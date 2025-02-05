@@ -1,14 +1,14 @@
-# Используем официальный образ Python
+# Use official Python image
 FROM python:3.9
 
-# Устанавливаем рабочую директорию
+# Set working directory
 WORKDIR /app
 
-# Копируем файлы проекта
+# Copy project files
 COPY server.py requirements.txt ./
 
-# Устанавливаем зависимости
+# Install dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Запускаем сервер
+# Start the server
 CMD ["python", "server.py"]
