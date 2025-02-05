@@ -1,0 +1,16 @@
+version: '3'
+
+services:
+  server:
+    build: ./server
+    ports:
+      - "5000:5000"
+    restart: always
+    env_file:
+      - .env
+
+  telegram-bot:
+    build: ./bot
+    restart: always
+    env_file:
+      - .env
