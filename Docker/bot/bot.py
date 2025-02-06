@@ -5,7 +5,7 @@ import os
 from aiogram import Bot, Dispatcher, types
 from aiogram.types import Message
 from aiogram.filters import CommandStart
-from flask import Flask, request, jsonify
+#from flask import Flask, request, jsonify
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
