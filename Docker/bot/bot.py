@@ -60,7 +60,7 @@ async def current_model(message: Message):
 # Function to interact with ChatGPT
 async def chat_with_gpt(user_message: str) -> str:
     try:
-        selected_model = load_selected_model()  # Always load the latest model
+        selected_model = load_selected_model()  # Load latest selected model
         client = openai.OpenAI()
         
         response = client.chat.completions.create(
@@ -68,11 +68,11 @@ async def chat_with_gpt(user_message: str) -> str:
             messages=[{"role": "user", "content": user_message}]
         )
 
-        # Log the actual model used by OpenAI
-        actual_model = response.model
+        actual_model = response.model  # Get the real model used
         logging.info(f"Used model: {actual_model}")
 
-        return f"[DEBUG: Used model {actual_model}]\n{response.choices[0].message.content}"
+        # Inject real model ID into response
+        return f"(🔹 Real Model ID: {actual_model})\n{response.choices[0].message.content}"
     except Exception as e:
         return f"Error: {str(e)}"
 
