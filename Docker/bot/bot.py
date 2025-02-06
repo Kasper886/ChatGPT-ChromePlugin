@@ -5,7 +5,7 @@ import os
 from flask import Flask, request, jsonify
 from aiogram import Bot, Dispatcher, types
 from aiogram.types import Message
-from aiogram.filters import CommandStart
+from aiogram.filters import CommandStart, Command
 from dotenv import load_dotenv
 from models_list import AVAILABLE_MODELS  # Import available models from an external file
 
@@ -40,7 +40,7 @@ def load_selected_model():
 selected_model = load_selected_model()
 
 # Function to change the model
-@dp.message(lambda message: message.text.startswith("/setmodel"))
+@dp.message(Command("setmodel"))
 async def set_model(message: Message):
     global selected_model
     model_name = message.text.split(" ", 1)[-1]
@@ -53,7 +53,7 @@ async def set_model(message: Message):
         await message.answer(f"❌ Invalid model name. Available models: {', '.join(AVAILABLE_MODELS)}")
 
 # Function to check the current selected model
-@dp.message(lambda message: message.text.startswith("/currentmodel"))
+@dp.message(Command("currentmodel"))
 async def current_model(message: Message):
     await message.answer(f"🛠 The current model is: {selected_model}")
 
