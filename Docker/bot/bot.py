@@ -7,7 +7,7 @@ from aiogram import Bot, Dispatcher, types
 from aiogram.types import Message
 from aiogram.filters import CommandStart
 from dotenv import load_dotenv
-from models_list import AVAILABLE_MODELS  # Import available models from external file
+from models_list import AVAILABLE_MODELS  # Import available models from an external file
 
 # Load environment variables
 load_dotenv()
@@ -21,9 +21,25 @@ app = Flask(__name__)
 
 openai.api_key = OPENAI_API_KEY
 
-selected_model = "gpt-3.5-turbo"  # Default model
+# File to store the selected model persistently
+SELECTED_MODEL_FILE = "selected_model.txt"
 
-# Function to change model
+# Function to save the selected model to a file
+def save_selected_model(model_name):
+    with open(SELECTED_MODEL_FILE, "w") as f:
+        f.write(model_name)
+
+# Function to load the selected model from a file
+def load_selected_model():
+    if os.path.exists(SELECTED_MODEL_FILE):
+        with open(SELECTED_MODEL_FILE, "r") as f:
+            return f.read().strip()
+    return "gpt-3.5-turbo"  # Default model if no file exists
+
+# Load the last selected model from the file on startup
+selected_model = load_selected_model()
+
+# Function to change the model
 @dp.message(lambda message: message.text.startswith("/setmodel"))
 async def set_model(message: Message):
     global selected_model
@@ -31,9 +47,15 @@ async def set_model(message: Message):
 
     if model_name in AVAILABLE_MODELS:
         selected_model = model_name
+        save_selected_model(model_name)  # Save model to file
         await message.answer(f"✅ Model changed to: {selected_model}")
     else:
         await message.answer(f"❌ Invalid model name. Available models: {', '.join(AVAILABLE_MODELS)}")
+
+# Function to check the current selected model
+@dp.message(lambda message: message.text.startswith("/currentmodel"))
+async def current_model(message: Message):
+    await message.answer(f"🛠 The current model is: {selected_model}")
 
 # Function to interact with ChatGPT
 async def chat_with_gpt(user_message: str) -> str:
@@ -51,7 +73,8 @@ async def chat_with_gpt(user_message: str) -> str:
 @dp.message(CommandStart())
 async def start_command(message: Message):
     await message.answer("Hello! I am a bot connected to ChatGPT. Ask me anything!\n"
-                         "To change the model, use /setmodel <model_name>")
+                         "To change the model, use /setmodel <model_name>\n"
+                         "To check the current model, use /currentmodel")
 
 @dp.message()
 async def handle_message(message: Message):
