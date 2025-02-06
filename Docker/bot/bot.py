@@ -44,10 +44,12 @@ selected_model = load_selected_model()
 
 # Function to generate model selection keyboard
 def get_model_keyboard():
-    keyboard = ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
-    for model in AVAILABLE_MODELS:
-        keyboard.add(KeyboardButton(text=model))
-    return keyboard
+    keyboard_buttons = [[KeyboardButton(text=model)] for model in AVAILABLE_MODELS]  # Use nested list for proper formatting
+    return ReplyKeyboardMarkup(
+        keyboard=keyboard_buttons,
+        resize_keyboard=True,
+        one_time_keyboard=True
+    )
 
 # Command to open model selection menu
 @dp.message(Command("setmodel"))
