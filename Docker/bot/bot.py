@@ -60,9 +60,10 @@ async def current_model(message: Message):
 # Function to interact with ChatGPT
 async def chat_with_gpt(user_message: str) -> str:
     try:
+        selected_model = load_selected_model()  # Always load the latest model
         client = openai.OpenAI()
         response = client.chat.completions.create(
-            model=selected_model,  # Uses the selected model
+            model=selected_model,  # Uses the updated selected model
             messages=[{"role": "user", "content": user_message}]
         )
         return response.choices[0].message.content
