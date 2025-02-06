@@ -55,6 +55,7 @@ async def set_model(message: Message):
 # Function to check the current selected model
 @dp.message(Command("currentmodel"))
 async def current_model(message: Message):
+    selected_model = load_selected_model()  # Ensure we load the latest model
     await message.answer(f"🛠 The current model is: {selected_model}")
 
 # Function to interact with ChatGPT
