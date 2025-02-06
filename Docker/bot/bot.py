@@ -62,11 +62,17 @@ async def chat_with_gpt(user_message: str) -> str:
     try:
         selected_model = load_selected_model()  # Always load the latest model
         client = openai.OpenAI()
+        
         response = client.chat.completions.create(
-            model=selected_model,  # Uses the updated selected model
+            model=selected_model,
             messages=[{"role": "user", "content": user_message}]
         )
-        return response.choices[0].message.content
+
+        # Log the actual model used by OpenAI
+        actual_model = response.model
+        logging.info(f"Used model: {actual_model}")
+
+        return f"[DEBUG: Used model {actual_model}]\n{response.choices[0].message.content}"
     except Exception as e:
         return f"Error: {str(e)}"
 
