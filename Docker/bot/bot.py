@@ -25,7 +25,7 @@ async def chat_with_gpt(user_message: str) -> str:
     try:
         client = openai.OpenAI()  # Create OpenAI client
         response = client.chat.completions.create(
-            model="gpt-4o",
+            model="gpt-3.5-turbo",
             messages=[{"role": "user", "content": user_message}]
         )
         return response.choices[0].message.content
