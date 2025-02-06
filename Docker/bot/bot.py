@@ -33,16 +33,19 @@ def save_selected_model(model_name):
 def load_selected_model():
     if os.path.exists(SELECTED_MODEL_FILE):
         with open(SELECTED_MODEL_FILE, "r") as f:
-            return f.read().strip()
-    return "gpt-3.5-turbo"  # Default model if no file exists
+            model = f.read().strip()
+            if model in AVAILABLE_MODELS:
+                return model
+    return "gpt-3.5-turbo"  # Default model if no file exists or invalid
 
 # Load the last selected model from the file on startup
 selected_model = load_selected_model()
 
 # Function to generate model selection keyboard
 def get_model_keyboard():
-    buttons = [KeyboardButton(text=model) for model in AVAILABLE_MODELS]
-    keyboard = ReplyKeyboardMarkup(resize_keyboard=True).add(*buttons)
+    keyboard = ReplyKeyboardMarkup(resize_keyboard=True)
+    for model in AVAILABLE_MODELS:
+        keyboard.add(KeyboardButton(text=model))
     return keyboard
 
 # Function to open model selection menu
@@ -58,7 +61,7 @@ async def select_model(message: Message):
         selected_model = message.text
         save_selected_model(selected_model)  # Save model to file
         await message.answer(f"✅ Model changed to: {selected_model}", reply_markup=types.ReplyKeyboardRemove())
-    else:
+    elif not message.text.startswith("/"):  # Ignore unknown commands
         await message.answer("❌ Invalid model selected. Use /setmodel to choose a model from the menu.")
 
 # Function to check the current selected model
@@ -84,9 +87,13 @@ async def chat_with_gpt(user_message: str) -> str:
 # Telegram bot handlers
 @dp.message(Command("start"))
 async def start_command(message: Message):
-    await message.answer("Hello! I am a bot connected to ChatGPT. Ask me anything!\n"
-                         "To change the model, use /setmodel\n"
-                         "To check the current model, use /currentmodel")
+    global selected_model
+    selected_model = load_selected_model()  # Ensure correct model is loaded
+    await message.answer(
+        "Hello! I am a bot connected to ChatGPT. Ask me anything!\n"
+        "To change the model, use /setmodel\n"
+        "To check the current model, use /currentmodel"
+    )
 
 @dp.message()
 async def handle_message(message: Message):
