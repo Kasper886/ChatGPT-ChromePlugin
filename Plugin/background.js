@@ -6,6 +6,7 @@ fetch('env.json')
     .then(env => {
         const TELEGRAM_BOT_TOKEN = env.TELEGRAM_BOT_TOKEN;
         const TELEGRAM_CHAT_ID = env.TELEGRAM_CHAT_ID;
+        const API_URL = env.API_URL;
 
         chrome.runtime.onInstalled.addListener(() => {
             console.log("Google Meet Audio to ChatGPT extension installed");
@@ -28,7 +29,7 @@ fetch('env.json')
 
                     processorNode.port.onmessage = (event) => {
                         const audioData = event.data;
-                        fetch("http://localhost:5000/transcribe", { // Send audio to server
+                        fetch("${API_URL}/transcribe", { // Send audio to server
                             method: "POST",
                             body: JSON.stringify({ audio: Array.from(audioData) }),
                             headers: { "Content-Type": "application/json" }
