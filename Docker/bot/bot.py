@@ -44,7 +44,7 @@ selected_model = load_selected_model()
 
 # Function to generate model selection keyboard
 def get_model_keyboard():
-    keyboard_buttons = [[KeyboardButton(text=model)] for model in AVAILABLE_MODELS]  # Use nested list for proper formatting
+    keyboard_buttons = [[KeyboardButton(text=model)] for model in AVAILABLE_MODELS]  # Ensure proper formatting
     return ReplyKeyboardMarkup(
         keyboard=keyboard_buttons,
         resize_keyboard=True,
@@ -65,6 +65,8 @@ async def select_model(message: Message):
         selected_model = message.text
         save_selected_model(selected_model)  # Save model to file
         await message.answer(f"✅ Model changed to: {selected_model}", reply_markup=ReplyKeyboardRemove())
+    elif message.text.startswith("/"):
+        return  # Ignore commands to avoid interference
     else:
         await message.answer("❌ Invalid model selected. Use /setmodel to choose a model from the menu.")
 
@@ -96,6 +98,8 @@ async def chat_with_gpt(user_message: str) -> str:
 # Telegram bot handlers
 @dp.message(Command("start"))
 async def start_command(message: Message):
+    global selected_model
+    selected_model = load_selected_model()  # Ensure model is loaded on start
     await message.answer("Hello! I am a bot connected to ChatGPT. Ask me anything!\n"
                          "To change the model, use /setmodel\n"
                          "To check the current model, use /currentmodel")
