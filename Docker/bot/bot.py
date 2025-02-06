@@ -7,6 +7,7 @@ from aiogram import Bot, Dispatcher, types
 from aiogram.types import Message
 from aiogram.filters import CommandStart
 from dotenv import load_dotenv
+from models_list import AVAILABLE_MODELS  # Import available models from external file
 
 # Load environment variables
 load_dotenv()
@@ -20,8 +21,6 @@ app = Flask(__name__)
 
 openai.api_key = OPENAI_API_KEY
 
-# List of available models
-AVAILABLE_MODELS = ["gpt-4o-mini", "gpt-3.5-turbo", "gpt-3.5-turbo-16k"]
 selected_model = "gpt-3.5-turbo"  # Default model
 
 # Function to change model
