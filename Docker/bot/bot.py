@@ -4,7 +4,7 @@ import openai
 import os
 from flask import Flask, request, jsonify
 from aiogram import Bot, Dispatcher, types
-from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton
+from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove
 from aiogram.filters import Command
 from dotenv import load_dotenv
 from models_list import AVAILABLE_MODELS  # Import available models from an external file
@@ -48,10 +48,11 @@ def get_model_keyboard():
         keyboard.add(KeyboardButton(text=model))
     return keyboard
 
-# Function to open model selection menu
+# Command to open model selection menu
 @dp.message(Command("setmodel"))
 async def set_model_menu(message: Message):
-    await message.answer("Select a model:", reply_markup=get_model_keyboard())
+    keyboard = get_model_keyboard()
+    await message.answer("Select a model:", reply_markup=keyboard)
 
 # Function to change the model when the user selects from the menu
 @dp.message()
@@ -60,11 +61,11 @@ async def select_model(message: Message):
     if message.text in AVAILABLE_MODELS:
         selected_model = message.text
         save_selected_model(selected_model)  # Save model to file
-        await message.answer(f"✅ Model changed to: {selected_model}", reply_markup=types.ReplyKeyboardRemove())
-    elif not message.text.startswith("/"):  # Ignore unknown commands
-        await message.answer("❌ Invalid model selected. Use /setmodel to choose a model from the menu.")
+        await message.answer(f"✅ Model changed to: {selected_model}", reply_markup=ReplyKeyboardRemove())
+    elif not message.text.startswith("/"):  # Ignore commands
+        return  # Ignore messages that are not model selections
 
-# Function to check the current selected model
+# Command to check the current selected model
 @dp.message(Command("currentmodel"))
 async def current_model(message: Message):
     await message.answer(f"🛠 The current model is: {selected_model}")
@@ -84,7 +85,7 @@ async def chat_with_gpt(user_message: str) -> str:
     except Exception as e:
         return f"Error: {str(e)}"
 
-# Telegram bot handlers
+# Command to start the bot
 @dp.message(Command("start"))
 async def start_command(message: Message):
     global selected_model
@@ -95,6 +96,7 @@ async def start_command(message: Message):
         "To check the current model, use /currentmodel"
     )
 
+# Function to handle non-command messages (user chat with GPT)
 @dp.message()
 async def handle_message(message: Message):
     if message.text.startswith("/"):
