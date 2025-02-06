@@ -2,15 +2,19 @@ version: '3'
 
 services:
   server:
-    build: ./server
+    build:
+      context: /root/ChatGPT-ChromePlugin/Docker/server
+    env_file:
+      - .env
     ports:
       - "5000:5000"
     restart: always
-    env_file:
-      - .env
 
   telegram-bot:
-    build: ./bot
-    restart: always
+    build:
+      context: /root/ChatGPT-ChromePlugin/Docker/bot
     env_file:
       - .env
+    depends_on:
+      - server
+    restart: always
