@@ -4,7 +4,7 @@ import openai
 import os
 from flask import Flask, request, jsonify
 from aiogram import Bot, Dispatcher, types
-from aiogram.types import Message
+from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton
 from aiogram.filters import Command
 from dotenv import load_dotenv
 from models_list import AVAILABLE_MODELS  # Import available models from an external file
@@ -39,18 +39,27 @@ def load_selected_model():
 # Load the last selected model from the file on startup
 selected_model = load_selected_model()
 
-# Function to change the model
-@dp.message(Command("setmodel"))
-async def set_model(message: Message):
-    global selected_model
-    model_name = message.text.split(" ", 1)[-1]
+# Function to generate model selection keyboard
+def get_model_keyboard():
+    buttons = [KeyboardButton(text=model) for model in AVAILABLE_MODELS]
+    keyboard = ReplyKeyboardMarkup(resize_keyboard=True).add(*buttons)
+    return keyboard
 
-    if model_name in AVAILABLE_MODELS:
-        selected_model = model_name
-        save_selected_model(model_name)  # Save model to file
-        await message.answer(f"✅ Model changed to: {selected_model}")
+# Function to open model selection menu
+@dp.message(Command("setmodel"))
+async def set_model_menu(message: Message):
+    await message.answer("Select a model:", reply_markup=get_model_keyboard())
+
+# Function to change the model when the user selects from the menu
+@dp.message()
+async def select_model(message: Message):
+    global selected_model
+    if message.text in AVAILABLE_MODELS:
+        selected_model = message.text
+        save_selected_model(selected_model)  # Save model to file
+        await message.answer(f"✅ Model changed to: {selected_model}", reply_markup=types.ReplyKeyboardRemove())
     else:
-        await message.answer(f"❌ Invalid model name. Available models: {', '.join(AVAILABLE_MODELS)}")
+        await message.answer("❌ Invalid model selected. Use /setmodel to choose a model from the menu.")
 
 # Function to check the current selected model
 @dp.message(Command("currentmodel"))
@@ -60,18 +69,14 @@ async def current_model(message: Message):
 # Function to interact with ChatGPT
 async def chat_with_gpt(user_message: str) -> str:
     try:
-        selected_model = load_selected_model()  # Load latest selected model
+        selected_model = load_selected_model()
         client = openai.OpenAI()
-        
         response = client.chat.completions.create(
             model=selected_model,
             messages=[{"role": "user", "content": user_message}]
         )
-
         actual_model = response.model  # Get the real model used
         logging.info(f"Used model: {actual_model}")
-
-        # Inject real model ID into response
         return f"(🔹 Real Model ID: {actual_model})\n{response.choices[0].message.content}"
     except Exception as e:
         return f"Error: {str(e)}"
@@ -80,13 +85,8 @@ async def chat_with_gpt(user_message: str) -> str:
 @dp.message(Command("start"))
 async def start_command(message: Message):
     await message.answer("Hello! I am a bot connected to ChatGPT. Ask me anything!\n"
-                         "To change the model, use /setmodel <model_name>\n"
+                         "To change the model, use /setmodel\n"
                          "To check the current model, use /currentmodel")
-###
-###@dp.message_handler(commands=["list"])
-###async def start_command(message: types.Message):
-###    await message.answer("Supported models: " + ", ".join(AVAILABLE_MODELS))
-###
 
 @dp.message()
 async def handle_message(message: Message):
