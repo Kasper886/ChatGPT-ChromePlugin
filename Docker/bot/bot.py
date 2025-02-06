@@ -82,10 +82,11 @@ async def start_command(message: Message):
     await message.answer("Hello! I am a bot connected to ChatGPT. Ask me anything!\n"
                          "To change the model, use /setmodel <model_name>\n"
                          "To check the current model, use /currentmodel")
-
-@dp.message_handler(commands=["list"])
-async def start_command(message: types.Message):
-    await message.answer("Supported models: " + ", ".join(AVAILABLE_MODELS))
+###
+###@dp.message_handler(commands=["list"])
+###async def start_command(message: types.Message):
+###    await message.answer("Supported models: " + ", ".join(AVAILABLE_MODELS))
+###
 
 @dp.message()
 async def handle_message(message: Message):
