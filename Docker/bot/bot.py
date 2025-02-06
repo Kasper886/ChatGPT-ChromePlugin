@@ -3,7 +3,7 @@ import logging
 import openai
 import os
 from flask import Flask, request, jsonify
-from aiogram import Bot, Dispatcher
+from aiogram import Bot, Dispatcher, types
 from aiogram.types import Message
 from aiogram.filters import CommandStart
 from dotenv import load_dotenv
@@ -20,12 +20,28 @@ app = Flask(__name__)
 
 openai.api_key = OPENAI_API_KEY
 
+# List of available models
+AVAILABLE_MODELS = ["gpt-4o-mini", "gpt-3.5-turbo", "gpt-3.5-turbo-16k"]
+selected_model = "gpt-3.5-turbo"  # Default model
+
+# Function to change model
+@dp.message(lambda message: message.text.startswith("/setmodel"))
+async def set_model(message: Message):
+    global selected_model
+    model_name = message.text.split(" ", 1)[-1]
+
+    if model_name in AVAILABLE_MODELS:
+        selected_model = model_name
+        await message.answer(f"✅ Model changed to: {selected_model}")
+    else:
+        await message.answer(f"❌ Invalid model name. Available models: {', '.join(AVAILABLE_MODELS)}")
+
 # Function to interact with ChatGPT
 async def chat_with_gpt(user_message: str) -> str:
     try:
-        client = openai.OpenAI()  # Create OpenAI client
+        client = openai.OpenAI()
         response = client.chat.completions.create(
-            model="chatgpt-4",
+            model=selected_model,  # Uses the selected model
             messages=[{"role": "user", "content": user_message}]
         )
         return response.choices[0].message.content
@@ -35,14 +51,15 @@ async def chat_with_gpt(user_message: str) -> str:
 # Telegram bot handlers
 @dp.message(CommandStart())
 async def start_command(message: Message):
-    await message.answer("Hello! I am a bot connected to ChatGPT. Ask me anything!")
+    await message.answer("Hello! I am a bot connected to ChatGPT. Ask me anything!\n"
+                         "To change the model, use /setmodel <model_name>")
 
 @dp.message()
 async def handle_message(message: Message):
     response = await chat_with_gpt(message.text)
     await message.answer(response)
 
-# Flask route for Google Meet webhook
+# Flask webhook for Google Meet
 @app.route("/meet_webhook", methods=["POST"])
 async def meet_webhook():
     data = request.json
