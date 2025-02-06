@@ -42,18 +42,33 @@ def load_selected_model():
 # Load the last selected model from the file on startup
 selected_model = load_selected_model()
 
-# Function to change the model
-@dp.message(Command("setmodel"))
-async def set_model(message: Message):
-    global selected_model
-    model_name = message.text.split(" ", 1)[-1]
+# Function to generate model selection keyboard
+def get_model_keyboard():
+    keyboard_buttons = [[KeyboardButton(text=model)] for model in AVAILABLE_MODELS]  # Ensure proper formatting
+    return ReplyKeyboardMarkup(
+        keyboard=keyboard_buttons,
+        resize_keyboard=True,
+        one_time_keyboard=True
+    )
 
-    if model_name in AVAILABLE_MODELS:
-        selected_model = model_name
-        save_selected_model(model_name)  # Save model to file
-        await message.answer(f"✅ Model changed to: {selected_model}")
+# Command to open model selection menu
+@dp.message(Command("setmodel"))
+async def set_model_menu(message: Message):
+    keyboard = get_model_keyboard()
+    await message.answer("Select a model:", reply_markup=keyboard)
+
+# Function to change the model when the user selects from the menu
+@dp.message()
+async def select_model(message: Message):
+    global selected_model
+    if message.text in AVAILABLE_MODELS:
+        selected_model = message.text
+        save_selected_model(selected_model)  # Save model to file
+        await message.answer(f"✅ Model changed to: {selected_model}", reply_markup=ReplyKeyboardRemove())
+    elif message.text.startswith("/"):
+        return  # Ignore commands to avoid interference
     else:
-        await message.answer(f"❌ Invalid model name. Available models: {', '.join(AVAILABLE_MODELS)}")
+        await message.answer("❌ Invalid model selected. Use /setmodel to choose a model from the menu.")
 
 # Function to check the current selected model
 @dp.message(Command("currentmodel"))
