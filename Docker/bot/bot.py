@@ -5,7 +5,7 @@ import os
 from flask import Flask, request, jsonify
 from aiogram import Bot, Dispatcher, types
 from aiogram.types import Message
-from aiogram.filters import CommandStart, Command
+from aiogram.filters import Command
 from dotenv import load_dotenv
 from models_list import AVAILABLE_MODELS  # Import available models from an external file
 
@@ -70,7 +70,7 @@ async def chat_with_gpt(user_message: str) -> str:
         return f"Error: {str(e)}"
 
 # Telegram bot handlers
-@dp.message(CommandStart())
+@dp.message(Command("start"))
 async def start_command(message: Message):
     await message.answer("Hello! I am a bot connected to ChatGPT. Ask me anything!\n"
                          "To change the model, use /setmodel <model_name>\n"
@@ -78,6 +78,8 @@ async def start_command(message: Message):
 
 @dp.message()
 async def handle_message(message: Message):
+    if message.text.startswith("/"):
+        return  # Ignore unknown commands
     response = await chat_with_gpt(message.text)
     await message.answer(response)
 
