@@ -23,6 +23,7 @@ openai.api_key = OPENAI_API_KEY
 
 # File to store the selected model persistently
 SELECTED_MODEL_FILE = "selected_model.txt"
+DEFAULT_MODEL = "gpt-3.5-turbo"  # Default model if no file exists
 
 # Function to save the selected model to a file
 def save_selected_model(model_name):
@@ -33,8 +34,10 @@ def save_selected_model(model_name):
 def load_selected_model():
     if os.path.exists(SELECTED_MODEL_FILE):
         with open(SELECTED_MODEL_FILE, "r") as f:
-            return f.read().strip()
-    return "gpt-3.5-turbo"  # Default model if no file exists
+            model = f.read().strip()
+            if model in AVAILABLE_MODELS:
+                return model
+    return DEFAULT_MODEL  # Return default model if no valid file exists
 
 # Load the last selected model from the file on startup
 selected_model = load_selected_model()
