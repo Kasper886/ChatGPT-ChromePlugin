@@ -26,24 +26,30 @@ SELECTED_MODEL_FILE = "selected_model.txt"
 DEFAULT_MODEL = "gpt-3.5-turbo"  # Default model if no file exists
 
 # Configure logging to include timestamps and other details
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levellevelname)s - %(message)s')
 
 # Function to save the selected model to a file
 def save_selected_model(model_name):
     logging.info(f"Saving selected model: {model_name}")
-    with open(SELECTED_MODEL_FILE, "w") as f:
-        f.write(model_name)
-    logging.info(f"Model {model_name} saved successfully")
+    try:
+        with open(SELECTED_MODEL_FILE, "w") as f:
+            f.write(model_name)
+        logging.info(f"Model {model_name} saved successfully")
+    except Exception as e:
+        logging.error(f"Error saving model {model_name}: {str(e)}")
 
 # Function to load the selected model from a file
 def load_selected_model():
-    if os.path.exists(SELECTED_MODEL_FILE):
-        with open(SELECTED_MODEL_FILE, "r") as f:
-            model = f.read().strip()
-            logging.info(f"Loaded selected model from file: {model}")
-            if model in AVAILABLE_MODELS:
-                return model
-    logging.info(f"No valid model file found, using default model: {DEFAULT_MODEL}")
+    try:
+        if os.path.exists(SELECTED_MODEL_FILE):
+            with open(SELECTED_MODEL_FILE, "r") as f:
+                model = f.read().strip()
+                logging.info(f"Loaded selected model from file: {model}")
+                if model in AVAILABLE_MODELS:
+                    return model
+        logging.info(f"No valid model file found, using default model: {DEFAULT_MODEL}")
+    except Exception as e:
+        logging.error(f"Error loading model from file: {str(e)}")
     return DEFAULT_MODEL  # Return default model if no valid file exists
 
 # Load the last selected model from the file on startup
@@ -93,6 +99,8 @@ async def select_model(message: Message):
                 with open(SELECTED_MODEL_FILE, "r") as f:
                     saved_model = f.read().strip()
                     logging.info(f"Verified saved model: {saved_model}")
+            else:
+                logging.error(f"File {SELECTED_MODEL_FILE} does not exist after attempting to save model.")
             await message.answer(f"✅ Model changed to: {selected_model}", reply_markup=ReplyKeyboardRemove())
         else:
             logging.warning(f"❌ Invalid model selected: {model_name}")
@@ -108,7 +116,7 @@ async def chat_with_gpt(user_message: str) -> str:
             messages=[{"role": "user", "content": user_message}]
         )
 
-        actual_model = response.model  # Get the real model used
+        actual_model = response['model']  # Get the real model used
         logging.info(f"Used model: {actual_model}")
 
         return f"(🔹 Real Model ID: {actual_model})\n{response.choices[0].message['content']}"
