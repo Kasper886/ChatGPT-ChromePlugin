@@ -117,7 +117,7 @@ async def handle_message(message: Message):
 dp.message.register(start_command, Command("start"))
 dp.message.register(select_model_menu, Command("setmodel"))
 dp.message.register(current_model, Command("currentmodel"))
-dp.message.register(select_model, lambda message: message.text.startswith("/setmodel "))  # Гарантируем вызов обработчика
+dp.message.register(select_model, Command("setmodel"))  # Updated handler registration
 dp.message.register(handle_message)  # Обработчик всех остальных сообщений
 
 # Flask webhook for Google Meet
