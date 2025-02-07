@@ -74,16 +74,15 @@ async def select_model_menu(message: Message):
 # Function to change model when user selects from the menu
 @router.message()
 async def select_model(message: Message):
-    global selected_model
+    logging.info(f"🔹 Received message: {message.text}")
 
     if message.text.startswith("/setmodel "):
         model_name = message.text.replace("/setmodel ", "").strip()
 
         if model_name in AVAILABLE_MODELS:
-            selected_model = model_name
-            save_selected_model(selected_model)  # Сохраняем модель
-            logging.info(f"✅ Model changed to: {selected_model}")
-            await message.answer(f"✅ Model changed to: {selected_model}", reply_markup=ReplyKeyboardRemove())
+            save_selected_model(model_name)  # Сохраняем модель
+            logging.info(f"✅ Model changed to: {model_name}")
+            await message.answer(f"✅ Model changed to: {model_name}", reply_markup=ReplyKeyboardRemove())
         else:
             logging.warning(f"❌ Invalid model selected: {model_name}")
             await message.answer("❌ Invalid model selected. Use /setmodel to choose a model from the menu.")
