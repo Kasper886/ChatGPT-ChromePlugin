@@ -48,36 +48,8 @@ selected_model = load_selected_model()
 async def start_command(message: Message):
     logging.info("✅ Received /start command")
     await message.answer("Hello! I am a bot connected to ChatGPT. Ask me anything!\n"
-                         "To change the model, use /selectmodel\n"
+                         "To change the model, use /setmodel\n"
                          "To check the current model, use /currentmodel")
-    
-@router.message(Command("setmodel"))
-async def select_model_menu(message: Message):
-    logging.info("✅ Received /setmodel command")
-    
-    keyboard_buttons = [[KeyboardButton(text=model)] for model in AVAILABLE_MODELS]
-    keyboard = ReplyKeyboardMarkup(
-        keyboard=keyboard_buttons,
-        resize_keyboard=True,
-        one_time_keyboard=True
-    )
-    
-    await message.answer("Select a model:", reply_markup=keyboard)
-
-# Model selection handler
-@router.message()
-async def select_model(message: Message):
-    global selected_model
-
-    if message.text.startswith("/setmodel "):
-        model_name = message.text.replace("/setmodel ", "").strip()
-        
-        if model_name in AVAILABLE_MODELS:
-            selected_model = model_name
-            save_selected_model(selected_model)  # Save the model
-            await message.answer(f"✅ Model changed to: {selected_model}", reply_markup=ReplyKeyboardRemove())
-        else:
-            await message.answer("❌ Invalid model selected. Use /setmodel to choose a model from the menu.")
 
 @router.message(Command("currentmodel"))
 async def current_model(message: Message):
@@ -85,15 +57,62 @@ async def current_model(message: Message):
     selected_model = load_selected_model()
     await message.answer(f"🛠 The current model is: {selected_model}")
 
+# Command to open model selection menu
+@router.message(Command("setmodel"))
+async def select_model_menu(message: Message):
+    logging.info("✅ Received /setmodel command")
+
+    keyboard_buttons = [[KeyboardButton(text=f"/setmodel {model}")] for model in AVAILABLE_MODELS]
+    keyboard = ReplyKeyboardMarkup(
+        keyboard=keyboard_buttons,
+        resize_keyboard=True,
+        one_time_keyboard=True
+    )
+
+    await message.answer("Select a model:", reply_markup=keyboard)
+
+# Function to change model when user selects from the menu
+@router.message()
+async def select_model(message: Message):
+    global selected_model
+
+    if message.text.startswith("/setmodel "):
+        model_name = message.text.replace("/setmodel ", "").strip()
+
+        if model_name in AVAILABLE_MODELS:
+            selected_model = model_name
+            save_selected_model(selected_model)  # Save model to file
+            await message.answer(f"✅ Model changed to: {selected_model}", reply_markup=ReplyKeyboardRemove())
+        else:
+            await message.answer("❌ Invalid model selected. Use /setmodel to choose a model from the menu.")
+
+# Register commands AFTER defining them
+dp.include_router(router)
+
+# Function to interact with ChatGPT
+async def chat_with_gpt(user_message: str) -> str:
+    try:
+        selected_model = load_selected_model()  # Load latest selected model
+        client = openai.OpenAI()
+        
+        response = client.chat.completions.create(
+            model=selected_model,
+            messages=[{"role": "user", "content": user_message}]
+        )
+
+        actual_model = response.model  # Get the real model used
+        logging.info(f"Used model: {actual_model}")
+
+        return f"(🔹 Real Model ID: {actual_model})\n{response.choices[0].message.content}"
+    except Exception as e:
+        return f"Error: {str(e)}"
+
 @router.message()
 async def handle_message(message: Message):
     if message.text.startswith("/"):
         return  # Ignore unknown commands
     response = await chat_with_gpt(message.text)
     await message.answer(response)
-
-# Register commands AFTER defining them
-dp.include_router(router)
 
 # Flask webhook for Google Meet
 @app.route("/meet_webhook", methods=["POST"])
