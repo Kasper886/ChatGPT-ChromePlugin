@@ -93,7 +93,11 @@ async def select_model(message: Message):
             await message.answer("❌ Invalid model selected. Use /setmodel to choose a model from the menu.")
 
 # Register commands AFTER defining them
-dp.include_router(router)
+router.message.register(start_command, Command("start"))
+router.message.register(select_model_menu, Command("setmodel"))
+router.message.register(current_model, Command("currentmodel"))
+router.message.register(select_model)  # Принудительно регистрируем выбор модели
+dp.include_router(router)  # Подключаем Router к Dispatcher
 
 # Function to interact with ChatGPT
 async def chat_with_gpt(user_message: str) -> str:
