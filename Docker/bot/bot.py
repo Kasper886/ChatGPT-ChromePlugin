@@ -88,9 +88,6 @@ async def select_model(message: Message):
             logging.warning(f"❌ Invalid model selected: {model_name}")
             await message.answer("❌ Invalid model selected. Use /setmodel to choose a model from the menu.")
 
-    elif message.text.startswith("/"):
-        return  # Игнорируем неизвестные команды
-
 # Register commands AFTER defining them
 dp.include_router(router)
 
