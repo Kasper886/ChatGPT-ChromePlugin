@@ -131,6 +131,14 @@ def run_flask():
 
 # Main function to run both Flask and Telegram bot concurrently
 async def main():
+    logging.info("Starting bot...")
+
+    # Manually register commands
+    dp.message.register(start_command, Command("start"))
+    dp.message.register(select_model_menu, Command("selectmodel"))
+    dp.message.register(current_model, Command("currentmodel"))
+    dp.message.register(handle_message)  # Handle general messages
+
     loop = asyncio.get_running_loop()
     loop.run_in_executor(None, run_flask)
     await dp.start_polling(bot)
