@@ -3,7 +3,7 @@ import logging
 import openai
 import os
 from flask import Flask, request, jsonify
-from aiogram import Bot, Dispatcher, types
+from aiogram import Bot, Dispatcher, types, Router
 from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove
 from aiogram.filters import Command
 from dotenv import load_dotenv
@@ -16,7 +16,16 @@ TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 bot = Bot(token=TELEGRAM_BOT_TOKEN)
-dp = Dispatcher(bot=bot)
+dp = Dispatcher()
+router = Router()
+
+router.message.register(start_command, Command("start"))
+router.message.register(select_model_menu, Command("selectmodel"))
+router.message.register(current_model, Command("currentmodel"))
+router.message.register(handle_message)
+
+dp.include_router(router)  # Подключаем Router к Dispatcher
+
 app = Flask(__name__)
 
 openai.api_key = OPENAI_API_KEY
