@@ -54,6 +54,7 @@ def get_model_keyboard():
 # Command to open model selection menu
 @dp.message(Command("selectmodel"))
 async def select_model_menu(message: Message):
+    logging.info("✅ Received /selectmodel command")
     keyboard = get_model_keyboard()
     await message.answer("Select a model:", reply_markup=keyboard)
 
@@ -73,7 +74,8 @@ async def select_model(message: Message):
 # Function to check the current selected model
 @dp.message(Command("currentmodel"))
 async def current_model(message: Message):
-    selected_model = load_selected_model()  # Ensure we load the latest model
+    logging.info("✅ Received /currentmodel command")
+    selected_model = load_selected_model()
     await message.answer(f"🛠 The current model is: {selected_model}")
 
 # Function to interact with ChatGPT
@@ -98,6 +100,7 @@ async def chat_with_gpt(user_message: str) -> str:
 # Telegram bot handlers
 @dp.message(Command("start"))
 async def start_command(message: Message):
+    logging.info("✅ Received /start command")
     global selected_model
     selected_model = load_selected_model()  # Ensure model is loaded on start
     await message.answer("Hello! I am a bot connected to ChatGPT. Ask me anything!\n"
@@ -133,7 +136,7 @@ def run_flask():
 async def main():
     logging.info("Starting bot...")
 
-    # Manually register commands
+    # Принудительно регистрируем команды
     dp.message.register(start_command, Command("start"))
     dp.message.register(select_model_menu, Command("selectmodel"))
     dp.message.register(current_model, Command("currentmodel"))
