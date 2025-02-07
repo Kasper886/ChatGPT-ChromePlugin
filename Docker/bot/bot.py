@@ -26,7 +26,7 @@ SELECTED_MODEL_FILE = "selected_model.txt"
 DEFAULT_MODEL = "gpt-3.5-turbo"  # Default model if no file exists
 
 # Configure logging to include timestamps and other details
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levellevelname)s - %(message)s')
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
 # Function to save the selected model to a file
 def save_selected_model(model_name):
@@ -119,7 +119,7 @@ async def chat_with_gpt(user_message: str) -> str:
         actual_model = response['model']  # Get the real model used
         logging.info(f"Used model: {actual_model}")
 
-        return f"(🔹 Real Model ID: {actual_model})\n{response.choices[0].message['content']}"
+        return f"(🔹 Real Model ID: {actual_model})\n{response['choices'][0]['message']['content']}"
     except Exception as e:
         logging.error(f"Error in chat_with_gpt: {str(e)}")
         return f"Error: {str(e)}"
