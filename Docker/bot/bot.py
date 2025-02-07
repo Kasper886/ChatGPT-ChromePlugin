@@ -75,9 +75,9 @@ async def select_model(message: Message):
         model_name = message.text.replace("/setmodel ", "").strip()
 
         if model_name in AVAILABLE_MODELS:
-            save_selected_model(model_name)  # Сохраняем модель
+            save_selected_model(model_name)  # Save the model
             global selected_model
-            selected_model = model_name  # Обновляем переменную с текущей моделью
+            selected_model = model_name  # Update the variable with the current model
             logging.info(f"✅ Model changed to: {selected_model}")
 
             await message.answer(f"✅ Model changed to: {selected_model}", reply_markup=ReplyKeyboardRemove())
@@ -88,10 +88,8 @@ async def select_model(message: Message):
 # Function to interact with ChatGPT
 async def chat_with_gpt(user_message: str) -> str:
     try:
-        selected_model = load_selected_model()  # Load latest selected model
-        client = openai.OpenAI()
-        
-        response = client.chat.completions.create(
+        selected_model = load_selected_model()  # Load the latest selected model
+        response = openai.ChatCompletion.create(
             model=selected_model,
             messages=[{"role": "user", "content": user_message}]
         )
@@ -99,7 +97,7 @@ async def chat_with_gpt(user_message: str) -> str:
         actual_model = response.model  # Get the real model used
         logging.info(f"Used model: {actual_model}")
 
-        return f"(🔹 Real Model ID: {actual_model})\n{response.choices[0].message.content}"
+        return f"(🔹 Real Model ID: {actual_model})\n{response.choices[0].message['content']}"
     except Exception as e:
         return f"Error: {str(e)}"
 
@@ -117,8 +115,8 @@ async def handle_message(message: Message):
 dp.message.register(start_command, Command("start"))
 dp.message.register(select_model_menu, Command("setmodel"))
 dp.message.register(current_model, Command("currentmodel"))
-dp.message.register(select_model, Command("setmodel"))  # Updated handler registration
-dp.message.register(handle_message)  # Обработчик всех остальных сообщений
+dp.message.register(select_model, lambda message: message.text.startswith("/setmodel "))  # Ensure the handler is called
+dp.message.register(handle_message)  # Handle all other messages
 
 # Flask webhook for Google Meet
 @app.route("/meet_webhook", methods=["POST"])
