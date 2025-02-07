@@ -50,6 +50,19 @@ async def start_command(message: Message):
     await message.answer("Hello! I am a bot connected to ChatGPT. Ask me anything!\n"
                          "To change the model, use /selectmodel\n"
                          "To check the current model, use /currentmodel")
+    
+@router.message(Command("setmodel"))
+async def select_model_menu(message: Message):
+    logging.info("✅ Received /setmodel command")
+    
+    keyboard_buttons = [[KeyboardButton(text=model)] for model in AVAILABLE_MODELS]
+    keyboard = ReplyKeyboardMarkup(
+        keyboard=keyboard_buttons,
+        resize_keyboard=True,
+        one_time_keyboard=True
+    )
+    
+    await message.answer("Select a model:", reply_markup=keyboard)
 
 @router.message(Command("currentmodel"))
 async def current_model(message: Message):
