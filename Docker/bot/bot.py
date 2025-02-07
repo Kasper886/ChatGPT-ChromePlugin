@@ -92,13 +92,6 @@ async def select_model(message: Message):
             logging.warning(f"❌ Invalid model selected: {model_name}")
             await message.answer("❌ Invalid model selected. Use /setmodel to choose a model from the menu.")
 
-# Register commands AFTER defining them
-router.message.register(start_command, Command("start"))
-router.message.register(select_model_menu, Command("setmodel"))
-router.message.register(current_model, Command("currentmodel"))
-router.message.register(select_model, lambda message: message.text.startswith("/setmodel "))  # Гарантируем вызов обработчика
-dp.include_router(router)  # Подключаем Router к Dispatcher
-
 # Function to interact with ChatGPT
 async def chat_with_gpt(user_message: str) -> str:
     try:
@@ -117,12 +110,23 @@ async def chat_with_gpt(user_message: str) -> str:
     except Exception as e:
         return f"Error: {str(e)}"
 
+# Function to handle user messages
 @router.message()
 async def handle_message(message: Message):
+    logging.info(f"🔹 Received user message: {message.text}")
+
     if message.text.startswith("/"):
         return  # Ignore unknown commands
+
     response = await chat_with_gpt(message.text)
     await message.answer(response)
+
+# Register commands AFTER defining them
+router.message.register(start_command, Command("start"))
+router.message.register(select_model_menu, Command("setmodel"))
+router.message.register(current_model, Command("currentmodel"))
+router.message.register(select_model, lambda message: message.text.startswith("/setmodel "))  # Гарантируем вызов обработчика
+dp.include_router(router)  # Подключаем Router к Dispatcher
 
 # Flask webhook for Google Meet
 @app.route("/meet_webhook", methods=["POST"])
