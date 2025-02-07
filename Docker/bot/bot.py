@@ -3,7 +3,7 @@ import logging
 import openai
 import os
 from flask import Flask, request, jsonify
-from aiogram import Bot, Dispatcher, Router, types
+from aiogram import Bot, Dispatcher, types
 from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove
 from aiogram.filters import Command
 from dotenv import load_dotenv
@@ -17,7 +17,6 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 bot = Bot(token=TELEGRAM_BOT_TOKEN)
 dp = Dispatcher()
-router = Router()
 app = Flask(__name__)
 
 openai.api_key = OPENAI_API_KEY
@@ -44,21 +43,18 @@ def load_selected_model():
 selected_model = load_selected_model()
 
 # Command handlers
-@router.message(Command("start"))
 async def start_command(message: Message):
     logging.info("✅ Received /start command")
     await message.answer("Hello! I am a bot connected to ChatGPT. Ask me anything!\n"
                          "To change the model, use /setmodel\n"
                          "To check the current model, use /currentmodel")
 
-@router.message(Command("currentmodel"))
 async def current_model(message: Message):
     logging.info("✅ Received /currentmodel command")
     selected_model = load_selected_model()
     await message.answer(f"🛠 The current model is: {selected_model}")
 
 # Command to open model selection menu
-@router.message(Command("setmodel"))
 async def select_model_menu(message: Message):
     logging.info("✅ Received /setmodel command")
 
@@ -72,7 +68,6 @@ async def select_model_menu(message: Message):
     await message.answer("Select a model:", reply_markup=keyboard)
 
 # Function to change model when user selects from the menu
-@router.message()
 async def select_model(message: Message):
     logging.info(f"🔹 Received message: {message.text}")
 
@@ -111,7 +106,6 @@ async def chat_with_gpt(user_message: str) -> str:
         return f"Error: {str(e)}"
 
 # Function to handle user messages
-@router.message()
 async def handle_message(message: Message):
     logging.info(f"🔹 Received user message: {message.text}")
 
@@ -122,11 +116,11 @@ async def handle_message(message: Message):
     await message.answer(response)
 
 # Register commands AFTER defining them
-router.message.register(start_command, Command("start"))
-router.message.register(select_model_menu, Command("setmodel"))
-router.message.register(current_model, Command("currentmodel"))
-router.message.register(select_model, lambda message: message.text.startswith("/setmodel "))  # Гарантируем вызов обработчика
-dp.include_router(router)  # Подключаем Router к Dispatcher
+dp.message.register(start_command, Command("start"))
+dp.message.register(select_model_menu, Command("setmodel"))
+dp.message.register(current_model, Command("currentmodel"))
+dp.message.register(select_model, lambda message: message.text.startswith("/setmodel "))  # Гарантируем вызов обработчика
+dp.message.register(handle_message)  # Обработчик всех остальных сообщений
 
 # Flask webhook for Google Meet
 @app.route("/meet_webhook", methods=["POST"])
