@@ -76,7 +76,8 @@ async def select_model(message: Message):
 
         if model_name in AVAILABLE_MODELS:
             save_selected_model(model_name)  # Сохраняем модель
-            selected_model = load_selected_model()  # Загружаем новую модель сразу после сохранения
+            global selected_model
+            selected_model = model_name  # Обновляем переменную с текущей моделью
             logging.info(f"✅ Model changed to: {selected_model}")
 
             await message.answer(f"✅ Model changed to: {selected_model}", reply_markup=ReplyKeyboardRemove())
