@@ -27,6 +27,7 @@ DEFAULT_MODEL = "gpt-3.5-turbo"  # Default model if no file exists
 
 # Function to save the selected model to a file
 def save_selected_model(model_name):
+    logging.info(f"Saving selected model: {model_name}")
     with open(SELECTED_MODEL_FILE, "w") as f:
         f.write(model_name)
 
@@ -35,8 +36,10 @@ def load_selected_model():
     if os.path.exists(SELECTED_MODEL_FILE):
         with open(SELECTED_MODEL_FILE, "r") as f:
             model = f.read().strip()
+            logging.info(f"Loaded selected model from file: {model}")
             if model in AVAILABLE_MODELS:
                 return model
+    logging.info(f"No valid model file found, using default model: {DEFAULT_MODEL}")
     return DEFAULT_MODEL  # Return default model if no valid file exists
 
 # Load the last selected model from the file on startup
