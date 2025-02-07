@@ -64,6 +64,21 @@ async def select_model_menu(message: Message):
     
     await message.answer("Select a model:", reply_markup=keyboard)
 
+# Model selection handler
+@router.message()
+async def select_model(message: Message):
+    global selected_model
+
+    if message.text.startswith("/setmodel "):
+        model_name = message.text.replace("/setmodel ", "").strip()
+        
+        if model_name in AVAILABLE_MODELS:
+            selected_model = model_name
+            save_selected_model(selected_model)  # Save the model
+            await message.answer(f"✅ Model changed to: {selected_model}", reply_markup=ReplyKeyboardRemove())
+        else:
+            await message.answer("❌ Invalid model selected. Use /setmodel to choose a model from the menu.")
+
 @router.message(Command("currentmodel"))
 async def current_model(message: Message):
     logging.info("✅ Received /currentmodel command")
