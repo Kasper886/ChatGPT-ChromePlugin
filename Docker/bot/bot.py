@@ -25,6 +25,9 @@ openai.api_key = OPENAI_API_KEY
 SELECTED_MODEL_FILE = "selected_model.txt"
 DEFAULT_MODEL = "gpt-3.5-turbo"  # Default model if no file exists
 
+# Configure logging to include timestamps and other details
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
 # Function to save the selected model to a file
 def save_selected_model(model_name):
     logging.info(f"Saving selected model: {model_name}")
@@ -76,6 +79,7 @@ async def select_model(message: Message):
 
     if message.text.startswith("/setmodel "):
         model_name = message.text.replace("/setmodel ", "").strip()
+        logging.info(f"Attempting to set model: {model_name}")
 
         if model_name in AVAILABLE_MODELS:
             save_selected_model(model_name)  # Save the model
@@ -92,6 +96,7 @@ async def select_model(message: Message):
 async def chat_with_gpt(user_message: str) -> str:
     try:
         selected_model = load_selected_model()  # Load the latest selected model
+        logging.info(f"Using model: {selected_model} for message: {user_message}")
         response = openai.ChatCompletion.create(
             model=selected_model,
             messages=[{"role": "user", "content": user_message}]
@@ -102,6 +107,7 @@ async def chat_with_gpt(user_message: str) -> str:
 
         return f"(🔹 Real Model ID: {actual_model})\n{response.choices[0].message['content']}"
     except Exception as e:
+        logging.error(f"Error in chat_with_gpt: {str(e)}")
         return f"Error: {str(e)}"
 
 # Function to handle user messages
@@ -109,6 +115,7 @@ async def handle_message(message: Message):
     logging.info(f"🔹 Received user message: {message.text}")
 
     if message.text.startswith("/"):
+        logging.info(f"Ignoring unknown command: {message.text}")
         return  # Ignore unknown commands
 
     response = await chat_with_gpt(message.text)
@@ -125,6 +132,7 @@ dp.message.register(handle_message)  # Handle all other messages
 @app.route("/meet_webhook", methods=["POST"])
 async def meet_webhook():
     data = request.json
+    logging.info(f"Received webhook data: {data}")
     if "text" in data:
         user_message = data["text"]
         response = await chat_with_gpt(user_message)
@@ -133,10 +141,12 @@ async def meet_webhook():
 
 # Function to send a message to Telegram
 async def send_telegram_message(text: str):
+    logging.info(f"Sending message to Telegram: {text}")
     await bot.send_message(os.getenv("TELEGRAM_CHAT_ID"), text)
 
 # Function to run Flask in asyncio
 def run_flask():
+    logging.info("Starting Flask app")
     app.run(host="0.0.0.0", port=5000, use_reloader=False)
 
 # Main function
