@@ -33,6 +33,7 @@ def save_selected_model(model_name):
     logging.info(f"Saving selected model: {model_name}")
     with open(SELECTED_MODEL_FILE, "w") as f:
         f.write(model_name)
+    logging.info(f"Model {model_name} saved successfully")
 
 # Function to load the selected model from a file
 def load_selected_model():
@@ -87,6 +88,11 @@ async def select_model(message: Message):
             selected_model = model_name  # Update the variable with the current model
             logging.info(f"✅ Model changed to: {selected_model}")
 
+            # Verify file contents after saving the model
+            if os.path.exists(SELECTED_MODEL_FILE):
+                with open(SELECTED_MODEL_FILE, "r") as f:
+                    saved_model = f.read().strip()
+                    logging.info(f"Verified saved model: {saved_model}")
             await message.answer(f"✅ Model changed to: {selected_model}", reply_markup=ReplyKeyboardRemove())
         else:
             logging.warning(f"❌ Invalid model selected: {model_name}")
