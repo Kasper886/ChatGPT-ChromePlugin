@@ -81,10 +81,15 @@ async def select_model(message: Message):
 
         if model_name in AVAILABLE_MODELS:
             selected_model = model_name
-            save_selected_model(selected_model)  # Save model to file
+            save_selected_model(selected_model)  # Сохраняем модель
+            logging.info(f"✅ Model changed to: {selected_model}")
             await message.answer(f"✅ Model changed to: {selected_model}", reply_markup=ReplyKeyboardRemove())
         else:
+            logging.warning(f"❌ Invalid model selected: {model_name}")
             await message.answer("❌ Invalid model selected. Use /setmodel to choose a model from the menu.")
+
+    elif message.text.startswith("/"):
+        return  # Игнорируем неизвестные команды
 
 # Register commands AFTER defining them
 dp.include_router(router)
