@@ -30,13 +30,13 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(level
 
 # Function to save the selected model to a file
 def save_selected_model(model_name):
-    logging.info(f"Saving selected model: {model_name}")
     try:
         with open(SELECTED_MODEL_FILE, "w") as f:
             f.write(model_name)
-        logging.info(f"Model {model_name} saved successfully")
+        os.chmod(SELECTED_MODEL_FILE, 0o666)  # Устанавливаем права на запись
+        logging.info(f"✅ Model {model_name} saved successfully to {SELECTED_MODEL_FILE}")
     except Exception as e:
-        logging.error(f"Error saving model {model_name}: {str(e)}")
+        logging.error(f"❌ Error saving model {model_name}: {str(e)}")
 
 # Function to load the selected model from a file
 def load_selected_model():
@@ -44,12 +44,12 @@ def load_selected_model():
         if os.path.exists(SELECTED_MODEL_FILE):
             with open(SELECTED_MODEL_FILE, "r") as f:
                 model = f.read().strip()
-                logging.info(f"Loaded selected model from file: {model}")
                 if model in AVAILABLE_MODELS:
+                    logging.info(f"✅ Loaded selected model: {model}")
                     return model
-        logging.info(f"No valid model file found, using default model: {DEFAULT_MODEL}")
+        logging.warning(f"⚠ No valid model found, using default: {DEFAULT_MODEL}")
     except Exception as e:
-        logging.error(f"Error loading model from file: {str(e)}")
+        logging.error(f"❌ Error loading model from file: {str(e)}")
     return DEFAULT_MODEL  # Return default model if no valid file exists
 
 # Load the last selected model from the file on startup
