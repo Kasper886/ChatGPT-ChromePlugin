@@ -96,7 +96,7 @@ async def select_model(message: Message):
 router.message.register(start_command, Command("start"))
 router.message.register(select_model_menu, Command("setmodel"))
 router.message.register(current_model, Command("currentmodel"))
-router.message.register(select_model, lambda msg: msg.text.startswith("/setmodel "))  # Принудительно регистрируем выбор модели
+router.message.register(select_model, lambda message: message.text.startswith("/setmodel "))  # Гарантируем вызов обработчика
 dp.include_router(router)  # Подключаем Router к Dispatcher
 
 # Function to interact with ChatGPT
