@@ -82,7 +82,12 @@ async def select_model(message: Message):
         if model_name in AVAILABLE_MODELS:
             save_selected_model(model_name)  # Сохраняем модель
             logging.info(f"✅ Model changed to: {model_name}")
-            await message.answer(f"✅ Model changed to: {model_name}", reply_markup=ReplyKeyboardRemove())
+
+            # Проверяем, сохранилась ли модель
+            test_model = load_selected_model()
+            logging.info(f"🔍 Loaded model after save: {test_model}")
+
+            await message.answer(f"✅ Model changed to: {test_model}", reply_markup=ReplyKeyboardRemove())
         else:
             logging.warning(f"❌ Invalid model selected: {model_name}")
             await message.answer("❌ Invalid model selected. Use /setmodel to choose a model from the menu.")
