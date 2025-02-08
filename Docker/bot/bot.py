@@ -26,7 +26,7 @@ SELECTED_MODEL_FILE = "selected_model.txt"
 DEFAULT_MODEL = "gpt-3.5-turbo"  # Default model if no file exists
 
 # Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levellevelname)s - %(message)s')
 
 def save_selected_model(model_name):
     try:
