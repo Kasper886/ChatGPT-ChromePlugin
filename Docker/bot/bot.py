@@ -112,9 +112,10 @@ async def select_model_menu(message: Message):
 @dp.message()
 async def handle_model_selection(message: Message):
     model_name = message.text.strip()
+
     logging.info(f"📝 DEBUG: Raw user selection: '{message.text}'")
-    logging.info(f"🔎 DEBUG: Checking against AVAILABLE_MODELS: {AVAILABLE_MODELS}")
-    
+    logging.info(f"🔎 DEBUG: Checking if '{model_name}' is in AVAILABLE_MODELS: {AVAILABLE_MODELS}")
+
     if model_name in AVAILABLE_MODELS:
         save_selected_model(model_name)
         global selected_model
@@ -122,8 +123,7 @@ async def handle_model_selection(message: Message):
         logging.info(f"✅ DEBUG: Model changed to: {selected_model}")
         await message.answer(f"✅ Model changed to: {selected_model}", reply_markup=ReplyKeyboardRemove())
     else:
-        logging.warning(f"❌ DEBUG: Invalid model selected: {model_name}")
-        await message.answer("❌ Invalid model selected. Use /setmodel to choose a model from the menu.")
+        logging.info(f"🚫 DEBUG: Message '{model_name}' is not a valid model name.")
 
 @dp.message()
 async def handle_message(message: Message):
