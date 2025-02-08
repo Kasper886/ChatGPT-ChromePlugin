@@ -19,8 +19,6 @@ bot = Bot(token=TELEGRAM_BOT_TOKEN)
 dp = Dispatcher()
 app = Flask(__name__)
 
-openai.api_key = OPENAI_API_KEY
-
 # Файл для сохранения выбранной модели
 SELECTED_MODEL_FILE = "selected_model.txt"
 DEFAULT_MODEL = "gpt-3.5-turbo"
@@ -53,11 +51,12 @@ selected_model = load_selected_model()
 async def chat_with_gpt(user_message: str) -> str:
     try:
         selected_model = load_selected_model()
-        response = openai.ChatCompletion.create(
+        client = openai.OpenAI(api_key=OPENAI_API_KEY)
+        response = client.chat.completions.create(
             model=selected_model,
             messages=[{"role": "user", "content": user_message}]
         )
-        return response["choices"][0]["message"]["content"]
+        return response.choices[0].message.content
     except Exception as e:
         logging.error(f"❌ ERROR in chat_with_gpt: {str(e)}")
         return f"Error: {str(e)}"
