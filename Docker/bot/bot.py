@@ -113,11 +113,27 @@ async def current_model(message: Message):
     selected_model = load_selected_model()
     await message.answer(f"🛠 The current model is: {selected_model}")
 
-#async def select_model_menu(message: Message):
-#    logging.info("✅ Received /setmodel command")
-#    keyboard_buttons = [[KeyboardButton(text=f"/setmodel {model}")] for model in AVAILABLE_MODELS]
-#    keyboard = ReplyKeyboardMarkup(keyboard=keyboard_buttons, resize_keyboard=True, one_time_keyboard=True)
-#    await message.answer("Select a model:", reply_markup=keyboard)
+async def select_model_menu(message: Message):
+    logging.info("✅ Received /setmodel command")
+    keyboard_buttons = [[KeyboardButton(text=f"/setmodel {model}")] for model in AVAILABLE_MODELS]
+    keyboard = ReplyKeyboardMarkup(keyboard=keyboard_buttons, resize_keyboard=True, one_time_keyboard=True)
+    await message.answer("Select a model:", reply_markup=keyboard)
+
+@dp.message()
+async def handle_model_selection(message: Message):
+    model_name = message.text.strip()
+    
+    logging.info(f"📝 DEBUG: User selected model: {model_name}")
+
+    if model_name in AVAILABLE_MODELS:
+        save_selected_model(model_name)
+        global selected_model
+        selected_model = model_name
+        logging.info(f"✅ DEBUG: Model changed to: {selected_model}")
+        await message.answer(f"✅ Model changed to: {selected_model}", reply_markup=ReplyKeyboardRemove())
+    else:
+        logging.warning(f"❌ DEBUG: Invalid model selected: {model_name}")
+        await message.answer("❌ Invalid model selected. Use /setmodel to choose a model from the menu.")
 
 async def select_model(message: Message):
     logging.info(f"🔹 DEBUG: Received /setmodel command with text: {message.text}")
