@@ -80,12 +80,9 @@ async def current_model(message: Message):
     await message.answer(f"🛠 Current model: {selected_model}")
 
 async def set_model_command(message: Message):
-    keyboard = InlineKeyboardMarkup(
-        inline_keyboard=[
-            [InlineKeyboardButton(text=model, callback_data=f"setmodel_{model}")]
-            for model in AVAILABLE_MODELS
-        ]
-    )
+    keyboard_buttons = [InlineKeyboardButton(text=model, callback_data=f"setmodel_{model}") for model in AVAILABLE_MODELS]
+    keyboard = InlineKeyboardMarkup(row_width=2)
+    keyboard.inline_keyboard.extend([keyboard_buttons[i:i+2] for i in range(0, len(keyboard_buttons), 2)])
     await message.answer("Select a model:", reply_markup=keyboard)
 
 @dp.callback_query()
