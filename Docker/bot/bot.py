@@ -130,6 +130,20 @@ dp.message.register(select_model_menu, Command("setmodel"))
 dp.message.register(current_model, Command("currentmodel"))
 dp.message.register(select_model, lambda message: message.text.startswith("/setmodel "))
 
+@dp.message()
+async def handle_message(message: Message):
+    logging.info(f"🔹 DEBUG: Received user message: {message.text}")
+
+    # Игнорируем команды
+    if message.text.startswith("/"):
+        logging.info(f"🚫 DEBUG: Ignoring command: {message.text}")
+        return  
+
+    response = await chat_with_gpt(message.text)
+    await message.answer(response)
+
+dp.message.register(handle_message)
+
 async def main():
     logging.info("Starting bot...")
     await dp.start_polling(bot)
