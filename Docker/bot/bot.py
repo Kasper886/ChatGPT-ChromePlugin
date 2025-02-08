@@ -73,20 +73,24 @@ def load_selected_model():
 
 selected_model = load_selected_model()
 
+import openai
+
 async def chat_with_gpt(user_message: str) -> str:
     try:
         selected_model = load_selected_model()
         logging.info(f"📝 DEBUG: Sending request to ChatGPT with model: {selected_model} and message: {user_message}")
-        
-        response = openai.ChatCompletion.create(
+
+        client = openai.OpenAI(api_key=OPENAI_API_KEY)  # Новый способ вызова API
+
+        response = client.chat.completions.create(
             model=selected_model,
             messages=[{"role": "user", "content": user_message}]
         )
-        
-        actual_model = response['model']
+
+        actual_model = response.model
         logging.info(f"✅ DEBUG: Used model: {actual_model}")
-        
-        return f"(🔹 Real Model ID: {actual_model})\n{response['choices'][0]['message']['content']}"
+
+        return f"(🔹 Real Model ID: {actual_model})\n{response.choices[0].message.content}"
     except Exception as e:
         logging.error(f"❌ ERROR in chat_with_gpt: {str(e)}")
         return f"Error: {str(e)}"
