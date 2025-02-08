@@ -155,6 +155,9 @@ async def select_model(message: Message):
 
 dp.message.register(start_command, Command("start"))
 #dp.message.register(select_model_menu, Command("setmodel"))
+dp.message.register(select_model_menu, Command("setmodel"))  # Показывает меню
+dp.message.register(handle_model_selection)  # Обрабатывает выбор модели
+##############################################
 dp.message.register(current_model, Command("currentmodel"))
 dp.message.register(select_model, lambda message: message.text.startswith("/setmodel "))
 
