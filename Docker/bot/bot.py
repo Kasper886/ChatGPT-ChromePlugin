@@ -113,17 +113,17 @@ async def current_model(message: Message):
     selected_model = load_selected_model()
     await message.answer(f"🛠 The current model is: {selected_model}")
 
-async def select_model_menu(message: Message):
-    logging.info("✅ Received /setmodel command")
-    keyboard_buttons = [[KeyboardButton(text=f"/setmodel {model}")] for model in AVAILABLE_MODELS]
-    keyboard = ReplyKeyboardMarkup(keyboard=keyboard_buttons, resize_keyboard=True, one_time_keyboard=True)
-    await message.answer("Select a model:", reply_markup=keyboard)
+#async def select_model_menu(message: Message):
+#    logging.info("✅ Received /setmodel command")
+#    keyboard_buttons = [[KeyboardButton(text=f"/setmodel {model}")] for model in AVAILABLE_MODELS]
+#    keyboard = ReplyKeyboardMarkup(keyboard=keyboard_buttons, resize_keyboard=True, one_time_keyboard=True)
+#    await message.answer("Select a model:", reply_markup=keyboard)
 
 async def select_model(message: Message):
     logging.info(f"🔹 DEBUG: Received /setmodel command with text: {message.text}")
 
-    if message.text.startswith("/setmodel"):
-        model_name = message.text.replace("/setmodel", "").strip()
+    if message.text.startswith("/setmodel "):
+        model_name = message.text.replace("/setmodel ", "").strip()
         logging.info(f"📝 DEBUG: Attempting to set model: {model_name}")
 
         if model_name in AVAILABLE_MODELS:
@@ -138,9 +138,9 @@ async def select_model(message: Message):
             await message.answer("❌ Invalid model selected. Use /setmodel to choose a model from the menu.")
 
 dp.message.register(start_command, Command("start"))
-dp.message.register(select_model_menu, Command("setmodel"))
+#dp.message.register(select_model_menu, Command("setmodel"))
 dp.message.register(current_model, Command("currentmodel"))
-dp.message.register(select_model, lambda message: message.text.startswith("/setmodel"))
+dp.message.register(select_model, lambda message: message.text.startswith("/setmodel "))
 
 @dp.message()
 async def handle_message(message: Message):
