@@ -82,7 +82,7 @@ async def current_model(message: Message):
 async def set_model_command(message: Message):
     keyboard = InlineKeyboardMarkup(row_width=2)  # указываем количество кнопок в строке
     keyboard.add(
-        *[InlineKeyboardButton(text=model, callback_data=f"setmodel_{model}") for model in AVAILABLE_MODELS]
+        [InlineKeyboardButton(text=model, callback_data=f"setmodel_{model}") for model in AVAILABLE_MODELS]
     )
     # отправка сообщения с клавиатурой
     await message.answer("Выберите модель:", reply_markup=keyboard)
