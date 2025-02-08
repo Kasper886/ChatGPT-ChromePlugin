@@ -50,8 +50,9 @@ def load_selected_model():
 
 selected_model = load_selected_model()
 
-async def chat_with_gpt(user_message: str) -> str:
+async def chat_with_gpt(message: Message):
     try:
+        user_message = message.text
         selected_model = load_selected_model()
         logging.info(f"📝 DEBUG: Sending request to ChatGPT with model: {selected_model} and message: {user_message}")
 
@@ -65,10 +66,11 @@ async def chat_with_gpt(user_message: str) -> str:
         actual_model = response.model
         logging.info(f"✅ DEBUG: Used model: {actual_model}")
 
-        return f"(🔹 Real Model ID: {actual_model})\n{response.choices[0].message.content}"
+        reply_text = f"(🔹 Real Model ID: {actual_model})\n{response.choices[0].message.content}"
+        await message.answer(reply_text)
     except Exception as e:
         logging.error(f"❌ ERROR in chat_with_gpt: {str(e)}")
-        return f"Error: {str(e)}"
+        await message.answer(f"Error: {str(e)}")
 
 async def start_command(message: Message):
     await message.answer("Hello! Use /setmodel to select a model.")
