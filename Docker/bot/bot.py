@@ -32,29 +32,25 @@ def save_selected_model(model_name):
     try:
         logging.info(f"📝 DEBUG: save_selected_model() called with model: {model_name}")
 
-        # Проверяем, существует ли файл, и создаём его при необходимости
         if not os.path.exists(SELECTED_MODEL_FILE):
             logging.warning(f"⚠ File {SELECTED_MODEL_FILE} not found, creating it...")
             with open(SELECTED_MODEL_FILE, "w") as f:
                 f.write("")
             os.chmod(SELECTED_MODEL_FILE, 0o666)
 
-        # Принудительно записываем модель в файл и сбрасываем кеш
         with open(SELECTED_MODEL_FILE, "w") as f:
             f.write(model_name)
             f.flush()
-            os.fsync(f.fileno())  # Гарантированная запись на диск
+            os.fsync(f.fileno())
 
-        # Проверяем, что данные записаны корректно
         with open(SELECTED_MODEL_FILE, "r") as f:
             saved_model = f.read().strip()
             logging.info(f"✅ DEBUG: Model successfully saved: {saved_model}")
 
         if saved_model != model_name:
             logging.error(f"❌ DEBUG: Model save mismatch! Expected: {model_name}, Found: {saved_model}")
-
     except Exception as e:
-        logging.error(f"❌ Error saving model to file: {str(e)}")
+        logging.error(f"❌ DEBUG: Error saving model {model_name}: {str(e)}")
 
 def load_selected_model():
     try:
@@ -95,40 +91,26 @@ async def select_model_menu(message: Message):
     await message.answer("Select a model:", reply_markup=keyboard)
 
 async def select_model(message: Message):
-    logging.info(f"🔹 Received message: {message.text}")
+    logging.info(f"🔹 DEBUG: Received /setmodel command with text: {message.text}")
+
     if message.text.startswith("/setmodel "):
         model_name = message.text.replace("/setmodel ", "").strip()
-        logging.info(f"Attempting to set model: {model_name}")
+        logging.info(f"📝 DEBUG: Attempting to set model: {model_name}")
+
         if model_name in AVAILABLE_MODELS:
             save_selected_model(model_name)
             global selected_model
             selected_model = model_name
-            logging.info(f"✅ Model changed to: {selected_model}")
+            logging.info(f"✅ DEBUG: Model changed to: {selected_model}")
             await message.answer(f"✅ Model changed to: {selected_model}", reply_markup=ReplyKeyboardRemove())
         else:
-            logging.warning(f"❌ Invalid model selected: {model_name}")
+            logging.warning(f"❌ DEBUG: Invalid model selected: {model_name}")
             await message.answer("❌ Invalid model selected. Use /setmodel to choose a model from the menu.")
-
-async def chat_with_gpt(user_message: str) -> str:
-    try:
-        selected_model = load_selected_model()
-        logging.info(f"Using model: {selected_model} for message: {user_message}")
-        response = openai.ChatCompletion.create(
-            model=selected_model,
-            messages=[{"role": "user", "content": user_message}]
-        )
-        actual_model = response['model']
-        logging.info(f"Used model: {actual_model}")
-        return f"(🔹 Real Model ID: {actual_model})\n{response['choices'][0]['message']['content']}"
-    except Exception as e:
-        logging.error(f"Error in chat_with_gpt: {str(e)}")
-        return f"Error: {str(e)}"
 
 dp.message.register(start_command, Command("start"))
 dp.message.register(select_model_menu, Command("setmodel"))
 dp.message.register(current_model, Command("currentmodel"))
 dp.message.register(select_model, lambda message: message.text.startswith("/setmodel "))
-dp.message.register(chat_with_gpt)
 
 async def main():
     logging.info("Starting bot...")
