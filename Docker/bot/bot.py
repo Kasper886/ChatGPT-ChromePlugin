@@ -30,7 +30,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(level
 
 def save_selected_model(model_name):
     try:
-        logging.info(f"📝 Attempting to save model: {model_name}")
+        logging.info(f"📝 DEBUG: save_selected_model() called with model: {model_name}")
 
         # Проверяем, существует ли файл, и создаём его при необходимости
         if not os.path.exists(SELECTED_MODEL_FILE):
@@ -39,20 +39,22 @@ def save_selected_model(model_name):
                 f.write("")
             os.chmod(SELECTED_MODEL_FILE, 0o666)
 
-        # Записываем модель в файл
+        # Принудительно записываем модель в файл и сбрасываем кеш
         with open(SELECTED_MODEL_FILE, "w") as f:
             f.write(model_name)
+            f.flush()
+            os.fsync(f.fileno())  # Гарантированная запись на диск
 
         # Проверяем, что данные записаны корректно
         with open(SELECTED_MODEL_FILE, "r") as f:
             saved_model = f.read().strip()
-            logging.info(f"✅ Model successfully saved: {saved_model}")
+            logging.info(f"✅ DEBUG: Model successfully saved: {saved_model}")
 
         if saved_model != model_name:
-            logging.error(f"❌ Model save mismatch! Expected: {model_name}, Found: {saved_model}")
+            logging.error(f"❌ DEBUG: Model save mismatch! Expected: {model_name}, Found: {saved_model}")
 
     except Exception as e:
-        logging.error(f"❌ Error saving model {model_name}: {str(e)}")
+        logging.error(f"❌ Error saving model to file: {str(e)}")
 
 def load_selected_model():
     try:
