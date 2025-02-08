@@ -176,6 +176,13 @@ async def handle_message(message: Message):
     await message.answer(response)
 
 # Регистрируем обработчики команд
+@dp.message()
+async def debug_all_messages(message: Message):
+    logging.info(f"🔍 DEBUG: Received message - {message.text}")
+
+# ✅ Добавляем debug обработчик перед остальными
+dp.message.register(debug_all_messages)  
+
 dp.message.register(start_command, Command("start"))  # Обрабатывает команду /start
 dp.message.register(select_model_menu, Command("setmodel"))  # Открывает меню выбора модели
 dp.message.register(current_model, Command("currentmodel"))  # Показывает текущую модель
