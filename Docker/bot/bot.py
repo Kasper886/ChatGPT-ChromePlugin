@@ -84,7 +84,8 @@ async def set_model_command(message: Message):
         inline_keyboard=[
             [InlineKeyboardButton(text=model, callback_data=f"setmodel_{model}")]
             for model in AVAILABLE_MODELS
-        ]
+        ],
+        row_width=2
     )
     await message.answer("Select a model:", reply_markup=keyboard)
 
