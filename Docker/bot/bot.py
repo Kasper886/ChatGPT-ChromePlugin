@@ -131,6 +131,8 @@ async def select_model(message: Message):
             logging.warning(f"❌ DEBUG: Invalid model selected: {model_name}")
             await message.answer("❌ Invalid model selected. Use /setmodel to choose a model from the menu.")
 
+dp.message.register(start_command, Command("start"))
+
 #####Keyboard added
 async def select_model_menu(message: Message):
     logging.info("✅ Received /setmodel command - opening menu")
@@ -144,9 +146,10 @@ async def select_model_menu(message: Message):
 async def handle_model_selection(message: Message):
     model_name = message.text.strip()
 
-    # ✅ Игнорируем команды (они обрабатываются отдельно)
+    # Проверяем, не является ли сообщение командой (начинается с '/')
     if model_name.startswith("/"):
-        return  
+        logging.info(f"🚫 DEBUG: Ignoring command '{model_name}', not a model name.")
+        return  # Игнорируем команды
 
     logging.info(f"📝 DEBUG: Raw user selection: '{message.text}'")
     logging.info(f"🔎 DEBUG: Checking if '{model_name}' is in AVAILABLE_MODELS: {AVAILABLE_MODELS}")
@@ -160,8 +163,11 @@ async def handle_model_selection(message: Message):
     else:
         logging.warning(f"❌ DEBUG: Invalid model selected: {model_name}")
         await message.answer("❌ Invalid model selected. Use /setmodel to choose a model from the menu.")
-    await message.answer("❌ Invalid model selected. Use /setmodel to choose a model from the menu.")
+
+dp.message.register(select_model_menu, Command("setmodel"))
 #####
+
+dp.message.register(current_model, Command("currentmodel"))
 
 @dp.message()
 async def handle_message(message: Message):
@@ -175,19 +181,7 @@ async def handle_message(message: Message):
     response = await chat_with_gpt(message.text)
     await message.answer(response)
 
-# Регистрируем обработчики команд
-@dp.message()
-async def debug_all_messages(message: Message):
-    logging.info(f"🔍 DEBUG: Received message - {message.text}")
-
-# ✅ Добавляем debug обработчик перед остальными
-dp.message.register(debug_all_messages)  
-
-dp.message.register(start_command, Command("start"))  # Обрабатывает команду /start
-dp.message.register(select_model_menu, Command("setmodel"))  # Открывает меню выбора модели
-dp.message.register(current_model, Command("currentmodel"))  # Показывает текущую модель
-dp.message.register(handle_model_selection)  # Обрабатывает выбор модели из меню
-dp.message.register(handle_message)  # Обрабатывает обычные сообщения (для ChatGPT)
+dp.message.register(handle_message)
 
 async def main():
     logging.info("Starting bot...")
