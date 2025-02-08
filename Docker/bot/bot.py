@@ -98,15 +98,19 @@ async def select_model(message: Message):
         logging.info(f"📝 DEBUG: Attempting to set model: {model_name}")
 
         if model_name in AVAILABLE_MODELS:
-            save_selected_model(model_name)
-            global selected_model
-            selected_model = model_name
-            logging.info(f"✅ DEBUG: Model changed to: {selected_model}")
-            await message.answer(f"✅ Model changed to: {selected_model}", reply_markup=ReplyKeyboardRemove())
-        else:
-            logging.warning(f"❌ DEBUG: Invalid model selected: {model_name}")
-            await message.answer("❌ Invalid model selected. Use /setmodel to choose a model from the menu.")
+            logging.info(f"📝 DEBUG: Attempting to save model: {model_name}")
+    
+            save_selected_model(model_name)  # Сохранение модели в файл
 
+            # Проверяем, действительно ли модель записалась
+            with open(SELECTED_MODEL_FILE, "r") as f:
+                saved_model = f.read().strip()
+                logging.info(f"📄 DEBUG: File content after save: {saved_model}")
+
+            global selected_model
+            selected_model = model_name  # Обновляем текущую модель
+            logging.info(f"✅ DEBUG: Model changed to: {selected_model}")
+    
 dp.message.register(start_command, Command("start"))
 dp.message.register(select_model_menu, Command("setmodel"))
 dp.message.register(current_model, Command("currentmodel"))
