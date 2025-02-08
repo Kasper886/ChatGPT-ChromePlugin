@@ -140,7 +140,7 @@ async def select_model_menu(message: types.Message):
     keyboard = types.ReplyKeyboardMarkup(keyboard=keyboard_buttons, resize_keyboard=True, one_time_keyboard=True)
     await message.reply("Select a model:", reply_markup=keyboard)
 
-#dp.message.register(select_model_menu, Command("setmodel"))
+dp.message.register(select_model_menu, Command("setmodel"))
 #####
 
 dp.message.register(current_model, Command("currentmodel"))
