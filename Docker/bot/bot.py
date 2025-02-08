@@ -134,17 +134,17 @@ async def select_model(message: Message):
 dp.message.register(start_command, Command("start"))
 
 #####Keyboard added
-async def select_model_menu(message: types.Message):
+async def select_model_menu(message: Message):
     logging.info("✅ Received /setmodel command")
     keyboard_buttons = [[KeyboardButton(text=f"/setmodel {model}")] for model in AVAILABLE_MODELS]
-    keyboard = types.ReplyKeyboardMarkup(keyboard=keyboard_buttons, resize_keyboard=True, one_time_keyboard=True)
-    await message.reply("Select a model:", reply_markup=keyboard)
+    keyboard = ReplyKeyboardMarkup(keyboard=keyboard_buttons, resize_keyboard=True, one_time_keyboard=True)
+    await message.answer("Select a model:", reply_markup=keyboard)
 
 dp.message.register(select_model_menu, Command("setmodel"))
 #####
 
 dp.message.register(current_model, Command("currentmodel"))
-dp.message.register(select_model, lambda message: message.text.startswith("/setmodel"))
+dp.message.register(select_model, lambda message: message.text.startswith("/setmodel "))
 
 @dp.message()
 async def handle_message(message: Message):
