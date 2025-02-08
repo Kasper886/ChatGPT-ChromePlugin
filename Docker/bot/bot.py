@@ -26,7 +26,7 @@ SELECTED_MODEL_FILE = "selected_model.txt"
 DEFAULT_MODEL = "gpt-3.5-turbo"  # Default model if no file exists
 
 # Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levellevelname)s - %(message)s')
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
 def save_selected_model(model_name):
     try:
@@ -80,12 +80,14 @@ def load_selected_model():
 
 selected_model = load_selected_model()
 
+import openai
+
 async def chat_with_gpt(user_message: str) -> str:
     try:
         selected_model = load_selected_model()
         logging.info(f"📝 DEBUG: Sending request to ChatGPT with model: {selected_model} and message: {user_message}")
 
-        client = openai.OpenAI(api_key=OPENAI_API_KEY)
+        client = openai.OpenAI(api_key=OPENAI_API_KEY)  # Новый способ вызова API
 
         response = client.chat.completions.create(
             model=selected_model,
@@ -111,11 +113,11 @@ async def current_model(message: Message):
     selected_model = load_selected_model()
     await message.answer(f"🛠 The current model is: {selected_model}")
 
-async def select_model_menu(message: Message):
-    logging.info("✅ Received /setmodel command")
-    keyboard_buttons = [[KeyboardButton(text=f"/setmodel {model}")] for model in AVAILABLE_MODELS]
-    keyboard = ReplyKeyboardMarkup(keyboard=keyboard_buttons, resize_keyboard=True, one_time_keyboard=True)
-    await message.answer("Select a model:", reply_markup=keyboard)
+#async def select_model_menu(message: Message):
+#    logging.info("✅ Received /setmodel command")
+#    keyboard_buttons = [[KeyboardButton(text=f"/setmodel {model}")] for model in AVAILABLE_MODELS]
+#    keyboard = ReplyKeyboardMarkup(keyboard=keyboard_buttons, resize_keyboard=True, one_time_keyboard=True)
+#    await message.answer("Select a model:", reply_markup=keyboard)
 
 async def select_model(message: Message):
     logging.info(f"🔹 DEBUG: Received /setmodel command with text: {message.text}")
@@ -125,7 +127,7 @@ async def select_model(message: Message):
         logging.info(f"📝 DEBUG: Attempting to set model: {model_name}")
 
         if model_name in AVAILABLE_MODELS:
-            logging.info(f"📝 DEBUG: {model_name} is in list")
+            logging.info(f"📝 DEBUG: {model_name} is in list") #мой лог
             save_selected_model(model_name)
             global selected_model
             selected_model = model_name
@@ -136,7 +138,7 @@ async def select_model(message: Message):
             await message.answer("❌ Invalid model selected. Use /setmodel to choose a model from the menu.")
 
 dp.message.register(start_command, Command("start"))
-dp.message.register(select_model_menu, Command("setmodel"))
+#dp.message.register(select_model_menu, Command("setmodel"))
 dp.message.register(current_model, Command("currentmodel"))
 dp.message.register(select_model, lambda message: message.text.startswith("/setmodel "))
 
