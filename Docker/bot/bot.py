@@ -112,6 +112,12 @@ async def select_model_menu(message: Message):
 @dp.message()
 async def handle_model_selection(message: Message):
     model_name = message.text.strip()
+
+    # Проверяем, является ли сообщение командой (начинается с '/')
+    if model_name.startswith("/"):
+        logging.info(f"🚫 DEBUG: Ignoring command '{model_name}', not a model name.")
+        return  # Игнорируем команды
+
     logging.info(f"📝 DEBUG: Raw user selection: '{message.text}'")
     logging.info(f"🔎 DEBUG: Checking if '{model_name}' is in AVAILABLE_MODELS: {AVAILABLE_MODELS}")
 
@@ -123,6 +129,7 @@ async def handle_model_selection(message: Message):
         await message.answer(f"✅ Model changed to: {selected_model}", reply_markup=ReplyKeyboardRemove())
     else:
         logging.warning(f"❌ DEBUG: Invalid model selected: {model_name}")
+
 
 @dp.message()
 async def handle_message(message: Message):
