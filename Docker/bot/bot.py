@@ -175,11 +175,12 @@ async def handle_message(message: Message):
     response = await chat_with_gpt(message.text)
     await message.answer(response)
 
-dp.message.register(start_command, Command("start"))
-dp.message.register(select_model_menu, Command("setmodel"))
-dp.message.register(current_model, Command("currentmodel"))
-dp.message.register(handle_model_selection)
-dp.message.register(handle_message)
+# Регистрируем обработчики команд
+dp.message.register(start_command, Command("start"))  # Обрабатывает команду /start
+dp.message.register(select_model_menu, Command("setmodel"))  # Открывает меню выбора модели
+dp.message.register(current_model, Command("currentmodel"))  # Показывает текущую модель
+dp.message.register(handle_model_selection)  # Обрабатывает выбор модели из меню
+dp.message.register(handle_message)  # Обрабатывает обычные сообщения (для ChatGPT)
 
 async def main():
     logging.info("Starting bot...")
