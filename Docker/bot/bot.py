@@ -122,11 +122,12 @@ async def select_model_menu(message: Message):
 async def select_model(message: Message):
     logging.info(f"🔹 DEBUG: Received /setmodel command with text: {message.text}")
 
-    if message.text.startswith("/setmodel "):
-        model_name = message.text.replace("/setmodel ", "").strip()
+    if message.text.startswith("/setmodel"):
+        model_name = message.text.replace("/setmodel", "").strip()
         logging.info(f"📝 DEBUG: Attempting to set model: {model_name}")
 
         if model_name in AVAILABLE_MODELS:
+            logging.info(f"📝 DEBUG: {model_name} is in list") #мой лог
             save_selected_model(model_name)
             global selected_model
             selected_model = model_name
