@@ -32,20 +32,23 @@ def save_selected_model(model_name):
     try:
         logging.info(f"📝 DEBUG: save_selected_model() called with model: {model_name}")
 
-        # Проверяем, существует ли файл, и создаём его при необходимости
+        # Проверяем, существует ли файл
         if not os.path.exists(SELECTED_MODEL_FILE):
             logging.warning(f"⚠ File {SELECTED_MODEL_FILE} not found, creating it...")
             with open(SELECTED_MODEL_FILE, "w") as f:
                 f.write("")
-            os.chmod(SELECTED_MODEL_FILE, 0o666)  # Даем полные права на запись
+            os.chmod(SELECTED_MODEL_FILE, 0o666)
 
-        # Принудительно записываем модель в файл
+        # Лог перед записью
+        logging.info(f"📝 DEBUG: Writing model '{model_name}' to {SELECTED_MODEL_FILE}")
+
+        # Записываем модель в файл
         with open(SELECTED_MODEL_FILE, "w") as f:
             f.write(model_name)
             f.flush()
-            os.fsync(f.fileno())  # Сбрасываем кеш
+            os.fsync(f.fileno())
 
-        # Проверяем, что данные записаны корректно
+        # Читаем файл обратно
         with open(SELECTED_MODEL_FILE, "r") as f:
             saved_model = f.read().strip()
             logging.info(f"📄 DEBUG: File content after save: {saved_model}")
