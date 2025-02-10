@@ -110,6 +110,9 @@ async def chat_with_gpt(message: Message):
         logging.error(f"❌ ERROR in chat_with_gpt: {str(e)}")
         await message.answer(f"Error: {str(e)}")
 
+async def start(message: Message):
+    await message.answer(f"Please select a model with /setmodel (current model is gpt-3.5 turbo) and start a new chat with /startnewchat")
+
 async def start_new_chat(message: Message):
     create_new_chat_file()
     timestamp = datetime.now().strftime("%d.%m.%Y %H.%M.%S")
@@ -118,15 +121,6 @@ async def start_new_chat(message: Message):
 async def current_model(message: Message):
     selected_model = load_selected_model()
     await message.answer(f"🛠 Current model: {selected_model}")
-
-#def set_model_command(message: Message):
-#    keyboard = InlineKeyboardMarkup(
-#        inline_keyboard=[
-#            [InlineKeyboardButton(text=model, callback_data=f"setmodel_{model}")]
-#            for model in AVAILABLE_MODELS
-#        ]
-#    )
-#    return message.answer("Select a model:", reply_markup=keyboard)
 
 def set_model_command(message: Message):
     # Создаем список кнопок по 2 в ряд
@@ -151,6 +145,7 @@ async def model_selected(callback_query: types.CallbackQuery):
     else:
         await callback_query.answer("❌ Invalid model selection.", show_alert=True)
 
+dp.message.register(start_new_chat, Command("start"))
 dp.message.register(start_new_chat, Command("startnewchat"))
 dp.message.register(set_model_command, Command("setmodel"))
 dp.message.register(current_model, Command("currentmodel"))
