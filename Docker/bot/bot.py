@@ -71,61 +71,53 @@ selected_model = load_selected_model()
 
 async def chat_with_gpt(message: Message):
     try:
-        # Расширенное логирование для отладки
-        logging.info(f"📝 DEBUG: Message type: {message.content_type}")
-        logging.info(f"📝 DEBUG: Full message object: {message}")
-        
-        # Проверяем тип сообщения
-        if message.content_type != 'text':
-            logging.info(f"⚠️ Received non-text message: {message.content_type}")
-            await message.answer("❌ Пожалуйста, отправьте текстовое сообщение")
-            return # Завершаем выполнение функции
-
+        # Базовые проверки
         if not message.text:
-            logging.info("⚠️ Received empty text message")
-            await message.answer("❌ Сообщение не содержит текста")
-            return # Завершаем выполнение функции
+            logging.info("⚠️ Empty message received")
+            return
 
-        # Логируем входящее сообщение
-        logging.info(f"📝 DEBUG: Incoming message: {message.text}")
-        
+        # Логируем важную информацию о сообщении
+        logging.info(f"📝 DEBUG: Chat type: {message.chat.type}")
+        logging.info(f"📝 DEBUG: Message from: {message.from_user.first_name} ({message.from_user.id})")
+        logging.info(f"📝 DEBUG: Original text: {message.text}")
+
         # Очищаем сообщение
         user_message = clean_message(message.text)
         logging.info(f"📝 DEBUG: Cleaned message: {user_message}")
 
         if not user_message:
-            await message.answer("❌ После обработки сообщение не содержит текста")
-            return # Завершаем выполнение функции
-        # Проверяем, существует ли файл чата
+            logging.info("⚠️ Message was empty after cleaning")
+            return
+
+        # Проверяем файл чата
         if not current_chat_file or not os.path.exists(current_chat_file):
             await message.answer("❌ Please start a new chat with /startnewchat")
-            return  # Завершаем выполнение функции
-        
-        # Загружаем текущую модель
-        selected_model = load_selected_model()
-        logging.info(f"📝 DEBUG: Sending request to ChatGPT with model: {selected_model} and message: {user_message}")
+            return
 
-        # Инициализируем OpenAI-клиент
+        # Загружаем модель и продолжаем обработку
+        selected_model = load_selected_model()
+        logging.info(f"🤖 Using model: {selected_model}")
+
+        # Создаем клиент OpenAI
         client = openai.OpenAI(api_key=OPENAI_API_KEY)
 
         # Загружаем историю сообщений
         messages = []
-        if current_chat_file and os.path.exists(current_chat_file):
-            with open(current_chat_file, "r") as f:
-                for line in f:
-                    if line.startswith("User:"):
-                        content = clean_message(line.replace("User: ", "").strip())
-                        if content:
-                            messages.append({"role": "user", "content": content})
-                    elif line.startswith("Bot:"):
-                        content = clean_message(line.replace("Bot: ", "").strip())
-                        if content:
-                            messages.append({"role": "assistant", "content": content})
+        with open(current_chat_file, "r") as f:
+            for line in f:
+                if line.startswith("User:"):
+                    content = clean_message(line.replace("User: ", "").strip())
+                    if content:
+                        messages.append({"role": "user", "content": content})
+                elif line.startswith("Bot:"):
+                    content = line.replace("Bot: ", "").strip()
+                    if content:
+                        messages.append({"role": "assistant", "content": content})
 
-        # Добавляем новое сообщение пользователя
+        # Добавляем новое сообщение
         messages.append({"role": "user", "content": user_message})
 
-        # Обрабатываем запрос в ChatGPT
+        # Отправляем запрос в ChatGPT
         response = client.chat.completions.create(
             model=selected_model,
             messages=messages
@@ -134,20 +126,19 @@ async def chat_with_gpt(message: Message):
         actual_model = response.model
         bot_response = response.choices[0].message.content
 
-        logging.info(f"✅ DEBUG: Used model: {actual_model}")
-        reply_text = f"(🔹 Real Model ID: {actual_model})\n{bot_response}"
+        # Формируем ответ
+        reply_text = f"(🔹 Model: {actual_model})\n{bot_response}"
 
-        # Сохраняем диалог в файл
+        # Сохраняем диалог
         append_to_chat_file(f"User: {user_message}")
         append_to_chat_file(f"Bot: {bot_response}")
 
-        # Отвечаем пользователю
-        await message.answer(reply_text)
+        # Отправляем ответ
+        await message.reply(reply_text)
 
     except Exception as e:
-        logging.error(f"❌ ERROR in chat_with_gpt: {str(e)}")
+        logging.error(f"❌ Error in chat_with_gpt: {str(e)}")
         await message.answer(f"Error: {str(e)}")
-
 
 async def start(message: Message):
     await message.answer(f"Please select a model with /setmodel (current model is gpt-3.5 turbo) and start a new chat with /startnewchat")
@@ -209,38 +200,6 @@ def clean_message(text: str) -> str:
 
     # Возвращаем очищенный текст (или пустую строку, если текста не осталось)
     return text if text else ""
-
-'''
-# Обработчик сообщений
-@dp.message()
-async def handle_messages(message: Message):
-    try:
-        if message.content_type == ContentType.VOICE:
-            logging.info("🎤 Received voice message")
-            await message.answer("Я пока не умею обрабатывать голосовые сообщения")
-            return
-            
-        elif message.content_type == ContentType.STICKER:
-            logging.info("🎯 Received sticker")
-            await message.answer("Я пока не умею обрабатывать стикеры")
-            return
-            
-        elif message.content_type == ContentType.PHOTO:
-            logging.info("📷 Received photo")
-            await message.answer("Я пока не умею обрабатывать фотографии")
-            return
-            
-        elif message.content_type == ContentType.TEXT:
-            await chat_with_gpt(message)
-            
-        else:
-            logging.info(f"❓ Received unknown content type: {message.content_type}")
-            await message.answer("Этот тип сообщений не поддерживается")
-            
-    except Exception as e:
-        logging.error(f"❌ Error in message handler: {str(e)}")
-        await message.answer("Произошла ошибка при обработке сообщения")
-'''
 
 dp.message.register(start, Command("start"))
 dp.message.register(start_new_chat, Command("startnewchat"))
