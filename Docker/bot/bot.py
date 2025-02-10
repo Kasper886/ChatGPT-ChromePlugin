@@ -114,13 +114,26 @@ async def current_model(message: Message):
     selected_model = load_selected_model()
     await message.answer(f"🛠 Current model: {selected_model}")
 
+#def set_model_command(message: Message):
+#    keyboard = InlineKeyboardMarkup(
+#        inline_keyboard=[
+#            [InlineKeyboardButton(text=model, callback_data=f"setmodel_{model}")]
+#            for model in AVAILABLE_MODELS
+#        ]
+#    )
+#    return message.answer("Select a model:", reply_markup=keyboard)
+
 def set_model_command(message: Message):
-    keyboard = InlineKeyboardMarkup(
-        inline_keyboard=[
-            [InlineKeyboardButton(text=model, callback_data=f"setmodel_{model}")]
-            for model in AVAILABLE_MODELS
-        ]
-    )
+    # Создаем список кнопок по 2 в ряд
+    buttons = []
+    row = []
+    for i, model in enumerate(AVAILABLE_MODELS):
+        row.append(InlineKeyboardButton(text=model, callback_data=f"setmodel_{model}"))
+        if len(row) == 2 or i == len(AVAILABLE_MODELS) - 1:
+            buttons.append(row)
+            row = []
+
+    keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
     return message.answer("Select a model:", reply_markup=keyboard)
 
 async def model_selected(callback_query: types.CallbackQuery):
