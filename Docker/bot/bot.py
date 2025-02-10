@@ -210,6 +210,7 @@ def clean_message(text: str) -> str:
     # Возвращаем очищенный текст (или пустую строку, если текста не осталось)
     return text if text else ""
 
+'''
 # Обработчик сообщений
 @dp.message()
 async def handle_messages(message: Message):
@@ -239,6 +240,7 @@ async def handle_messages(message: Message):
     except Exception as e:
         logging.error(f"❌ Error in message handler: {str(e)}")
         await message.answer("Произошла ошибка при обработке сообщения")
+'''
 
 dp.message.register(start, Command("start"))
 dp.message.register(start_new_chat, Command("startnewchat"))
