@@ -7,6 +7,7 @@ from flask import Flask, request, jsonify
 from aiogram import Bot, Dispatcher, types
 from aiogram.types import Message, ReplyKeyboardRemove, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.filters import Command
+from aiogram.enums import ChatType
 from dotenv import load_dotenv
 from models_list import AVAILABLE_MODELS  # Import available models from an external file
 
@@ -69,6 +70,10 @@ selected_model = load_selected_model()
 
 async def chat_with_gpt(message: Message):
     try:
+        # Проверяем, существует ли сообщение и не является ли оно пустым
+        if not message.text:
+            return
+        
         # Проверяем, существует ли файл с историей чата
         if not current_chat_file or not os.path.exists(current_chat_file):
             await message.answer("❌ Please start a new chat with /startnewchat")
@@ -150,7 +155,9 @@ dp.message.register(start_new_chat, Command("startnewchat"))
 dp.message.register(set_model_command, Command("setmodel"))
 dp.message.register(current_model, Command("currentmodel"))
 dp.callback_query.register(model_selected)
-dp.message.register(chat_with_gpt)
+#dp.message.register(chat_with_gpt)
+# Используем ChatType напрямую
+dp.message.register(chat_with_gpt, lambda message: message.chat.type in [ChatType.PRIVATE, ChatType.GROUP, ChatType.SUPERGROUP])
 
 async def main():
     logging.info("Starting bot...")
