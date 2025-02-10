@@ -75,9 +75,19 @@ async def chat_with_gpt(message: Message):
 
         client = openai.OpenAI(api_key=OPENAI_API_KEY)
 
+        messages = []
+        if current_chat_file and os.path.exists(current_chat_file):
+            with open(current_chat_file, "r") as f:
+                for line in f:
+                    if line.startswith("User:"):
+                        messages.append({"role": "user", "content": line.replace("User: ", "").strip()})
+                    elif line.startswith("Bot:"):
+                        messages.append({"role": "assistant", "content": line.replace("Bot: ", "").strip()})
+        messages.append({"role": "user", "content": user_message})
+
         response = client.chat.completions.create(
             model=selected_model,
-            messages=[{"role": "user", "content": user_message}]
+            messages=messages
         )
 
         actual_model = response.model
@@ -100,16 +110,19 @@ async def start_new_chat(message: Message):
     timestamp = datetime.now().strftime("%d.%m.%Y %H.%M.%S")
     await message.answer(f"🆕 New session with ChatGPT {timestamp}")
 
-async def set_model_command(message: Message):
+async def current_model(message: Message):
+    selected_model = load_selected_model()
+    await message.answer(f"🛠 Current model: {selected_model}")
+
+def set_model_command(message: Message):
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
             [InlineKeyboardButton(text=model, callback_data=f"setmodel_{model}")]
             for model in AVAILABLE_MODELS
         ]
     )
-    await message.answer("Select a model:", reply_markup=keyboard)
+    return message.answer("Select a model:", reply_markup=keyboard)
 
-@dp.callback_query()
 async def model_selected(callback_query: types.CallbackQuery):
     model_name = callback_query.data.replace("setmodel_", "")
     if model_name in AVAILABLE_MODELS:
@@ -122,6 +135,7 @@ async def model_selected(callback_query: types.CallbackQuery):
 
 dp.message.register(start_new_chat, Command("startnewchat"))
 dp.message.register(set_model_command, Command("setmodel"))
+dp.message.register(current_model, Command("currentmodel"))
 dp.callback_query.register(model_selected)
 dp.message.register(chat_with_gpt)
 
