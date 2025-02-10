@@ -76,8 +76,7 @@ def clean_message(text: str) -> str:
 # === Обработчики команд ===
 @dp.message(CommandStart())
 async def cmd_start(message: Message):
-    if message.chat.type == ChatType.PRIVATE:  # Отвечаем только в личных чатах
-        await message.answer("Привет! Используйте /startnewchat для начала нового чата.")
+    await message.answer("Привет! Используйте /startnewchat для начала нового чата.")
 
 @dp.message(Command("startnewchat"))
 async def start_new_chat(message: Message):
