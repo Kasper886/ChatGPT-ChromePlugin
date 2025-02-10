@@ -3,12 +3,10 @@ import logging
 import openai
 import os
 from datetime import datetime
-from flask import Flask, request, jsonify
+from flask import Flask
 from aiogram import Bot, Dispatcher, types
-from aiogram.types import Message, ReplyKeyboardRemove, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import Message, ContentType, ReplyKeyboardRemove, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.filters import Command
-from aiogram.enums import ChatType
-from aiogram.types import ContentType
 from dotenv import load_dotenv
 from models_list import AVAILABLE_MODELS  # Import available models from an external file
 
@@ -29,12 +27,17 @@ SELECTED_MODEL_FILE = "selected_model.txt"
 DEFAULT_MODEL = "gpt-3.5-turbo"  # Default model if no file exists
 
 # Logging configuration
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 # Global variable to track current chat file
 current_chat_file = None
 
+
+# ==== UTILITY FUNCTIONS ====
 def create_new_chat_file():
+    """
+    Creates a new chat log file with a timestamp.
+    """
     global current_chat_file
     timestamp = datetime.now().strftime("chat-%d-%m-%y-%H-%M-%S.txt")
     current_chat_file = timestamp
@@ -42,12 +45,20 @@ def create_new_chat_file():
         f.write("Chat started\n")
     logging.info(f"New chat file created: {current_chat_file}")
 
+
 def append_to_chat_file(text):
+    """
+    Appends text to the chat log file.
+    """
     if current_chat_file:
         with open(current_chat_file, "a") as f:
             f.write(text + "\n")
 
+
 def save_selected_model(model_name):
+    """
+    Saves the selected model to a file.
+    """
     try:
         with open(SELECTED_MODEL_FILE, "w") as f:
             f.write(model_name)
@@ -55,7 +66,11 @@ def save_selected_model(model_name):
     except Exception as e:
         logging.error(f"❌ Error saving model: {str(e)}")
 
+
 def load_selected_model():
+    """
+    Loads the selected model from a file.
+    """
     try:
         if os.path.exists(SELECTED_MODEL_FILE):
             with open(SELECTED_MODEL_FILE, "r") as f:
@@ -67,57 +82,78 @@ def load_selected_model():
         logging.error(f"❌ Error loading model: {str(e)}")
         return DEFAULT_MODEL
 
+
 selected_model = load_selected_model()
 
-async def chat_with_gpt(message: Message):
-    try:
-        # Базовые проверки
-        if not message.text:
-            logging.info("⚠️ Empty message received")
-            return
 
-        # Логируем важную информацию о сообщении
+def clean_message(text: str) -> str:
+    """
+    Cleans the input message by removing unnecessary phrases
+    or unwanted content like "Голосовое сообщение".
+    """
+    if not text:  # If the text is None or empty
+        return ""
+
+    # Remove unwanted phrases
+    unwanted_phrases = [
+        "Голосовое сообщение",
+        "Voice message",
+        "Аудиосообщение",
+        "Audio message",
+    ]
+    for phrase in unwanted_phrases:
+        text = text.replace(phrase, "").strip()
+
+    return text if text else ""
+
+
+# ==== BOT HANDLERS ====
+async def chat_with_gpt(message: Message):
+    """
+    Processes a user's message and generates a response using OpenAI's API.
+    """
+    try:
+        # Log incoming messages
+        logging.info(f"📝 DEBUG: Full message object: {message}")
         logging.info(f"📝 DEBUG: Chat type: {message.chat.type}")
-        logging.info(f"📝 DEBUG: Message from: {message.from_user.first_name} ({message.from_user.id})")
         logging.info(f"📝 DEBUG: Original text: {message.text}")
 
-        # Очищаем сообщение
+        # Clean and prepare the message
         user_message = clean_message(message.text)
         logging.info(f"📝 DEBUG: Cleaned message: {user_message}")
 
-        if not user_message:
-            logging.info("⚠️ Message was empty after cleaning")
+        if not user_message:  # Ignore empty messages after cleaning
+            await message.reply("❌ Сообщение не содержит текста для обработки.")
             return
 
-        # Проверяем файл чата
+        # Check if the chat file exists
         if not current_chat_file or not os.path.exists(current_chat_file):
-            await message.answer("❌ Please start a new chat with /startnewchat")
+            await message.reply("❌ Используйте /startnewchat для начала нового чата.")
             return
 
-        # Загружаем модель и продолжаем обработку
+        # Load selected model
         selected_model = load_selected_model()
         logging.info(f"🤖 Using model: {selected_model}")
 
-        # Создаем клиент OpenAI
-        client = openai.OpenAI(api_key=OPENAI_API_KEY)
-
-        # Загружаем историю сообщений
+        # Load the chat history
         messages = []
-        with open(current_chat_file, "r") as f:
-            for line in f:
-                if line.startswith("User:"):
-                    content = clean_message(line.replace("User: ", "").strip())
-                    if content:
-                        messages.append({"role": "user", "content": content})
-                elif line.startswith("Bot:"):
-                    content = line.replace("Bot: ", "").strip()
-                    if content:
-                        messages.append({"role": "assistant", "content": content})
+        if current_chat_file and os.path.exists(current_chat_file):
+            with open(current_chat_file, "r") as f:
+                for line in f:
+                    if line.startswith("User:"):
+                        content = clean_message(line.replace("User: ", "").strip())
+                        if content:
+                            messages.append({"role": "user", "content": content})
+                    elif line.startswith("Bot:"):
+                        content = line.replace("Bot: ", "").strip()
+                        if content:
+                            messages.append({"role": "assistant", "content": content})
 
-        # Добавляем новое сообщение
+        # Add the new message to the conversation
         messages.append({"role": "user", "content": user_message})
 
-        # Отправляем запрос в ChatGPT
+        # Call OpenAI API
+        client = openai.OpenAI(api_key=OPENAI_API_KEY)
         response = client.chat.completions.create(
             model=selected_model,
             messages=messages
@@ -126,94 +162,56 @@ async def chat_with_gpt(message: Message):
         actual_model = response.model
         bot_response = response.choices[0].message.content
 
-        # Формируем ответ
+        # Format the reply
         reply_text = f"(🔹 Model: {actual_model})\n{bot_response}"
 
-        # Сохраняем диалог
+        # Save the chat to the file
         append_to_chat_file(f"User: {user_message}")
         append_to_chat_file(f"Bot: {bot_response}")
 
-        # Отправляем ответ
+        # Send the response
         await message.reply(reply_text)
 
     except Exception as e:
         logging.error(f"❌ Error in chat_with_gpt: {str(e)}")
-        await message.answer(f"Error: {str(e)}")
+        await message.reply(f"Произошла ошибка: {str(e)}")
 
-async def start(message: Message):
-    await message.answer(f"Please select a model with /setmodel (current model is gpt-3.5 turbo) and start a new chat with /startnewchat")
 
+@dp.message(Command("startnewchat"))
 async def start_new_chat(message: Message):
+    """
+    Starts a new chat session by creating a new log file.
+    """
     create_new_chat_file()
-    timestamp = datetime.now().strftime("%d.%m.%Y %H.%M.%S")
-    await message.answer(f"🆕 New session with ChatGPT {timestamp}")
+    timestamp = datetime.now().strftime("%d.%m.%Y %H:%M:%S")
+    await message.reply(f"🆕 Новый чат начат: {timestamp}")
 
-async def current_model(message: Message):
-    selected_model = load_selected_model()
-    await message.answer(f"🛠 Current model: {selected_model}")
 
-def set_model_command(message: Message):
-    # Создаем список кнопок по 2 в ряд
-    buttons = []
-    row = []
-    for i, model in enumerate(AVAILABLE_MODELS):
-        row.append(InlineKeyboardButton(text=model, callback_data=f"setmodel_{model}"))
-        if len(row) == 2 or i == len(AVAILABLE_MODELS) - 1:
-            buttons.append(row)
-            row = []
-
-    keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
-    return message.answer("Select a model:", reply_markup=keyboard)
-
-async def model_selected(callback_query: types.CallbackQuery):
-    model_name = callback_query.data.replace("setmodel_", "")
-    if model_name in AVAILABLE_MODELS:
-        save_selected_model(model_name)
-        global selected_model
-        selected_model = model_name
-        await callback_query.message.edit_text(f"✅ Model changed to: {model_name}")
-    else:
-        await callback_query.answer("❌ Invalid model selection.", show_alert=True)
-
-def clean_message(text: str) -> str:
+@dp.message(ContentType.TEXT)
+async def handle_messages(message: Message):
     """
-    Фильтрует и очищает входящий текст сообщения от системных фраз
-    или ненужных элементов (например, «Голосовое сообщение»).
+    Routes text messages to chat_with_gpt and handles non-text content.
     """
-    if not text:  # Проверяем, что сообщение не пустое
-        return ""
+    if message.text.startswith("/"):
+        logging.info(f"🔧 Command received: {message.text}")
+        return  # Ignore commands here, they will be handled separately
 
-    # Убираем системные фразы (можно добавить другие ключевые слова)
-    unwanted_phrases = [
-        "Голосовое сообщение",  # Пример: фраза от SaluteSpeechBot
-        "Voice message",        # Если есть английские варианты
-        "Аудиосообщение",       # Дополнительные варианты на русском
-        "Audio message"         # Варианты на английском
-    ]
+    await chat_with_gpt(message)
 
-    # Убираем ненужные фразы из текста
-    for phrase in unwanted_phrases:
-        text = text.replace(phrase, "").strip()
 
-    # Убираем лишние символы или ссылки (если присутствуют)
-    text = text.strip('@').strip()  # Очистка от "@" или других символов
+@dp.message()
+async def handle_non_text_messages(message: Message):
+    """
+    Handles non-text messages such as voice, photo, etc.
+    """
+    logging.info(f"📌 Received non-text content: {message.content_type}")
+    await message.reply("❌ Этот тип сообщений не поддерживается. Отправьте текст.")
 
-    # Возвращаем очищенный текст (или пустую строку, если текста не осталось)
-    return text if text else ""
-
-dp.message.register(start, Command("start"))
-dp.message.register(start_new_chat, Command("startnewchat"))
-dp.message.register(set_model_command, Command("setmodel"))
-dp.message.register(current_model, Command("currentmodel"))
-dp.callback_query.register(model_selected)
-#dp.message.register(chat_with_gpt)
-# Используем ChatType напрямую
-dp.message.register(chat_with_gpt, lambda message: message.chat.type in [ChatType.PRIVATE, ChatType.GROUP, ChatType.SUPERGROUP])
-#dp.message.register(handle_messages)
 
 async def main():
     logging.info("Starting bot...")
     await dp.start_polling(bot)
+
 
 if __name__ == "__main__":
     asyncio.run(main())
