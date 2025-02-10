@@ -165,8 +165,59 @@ async def chat_with_gpt(message: Message):
 
 @dp.message()
 async def handle_messages(message: Message):
-    if message.content_type == ContentType.TEXT and not message.text.startswith('/'):
-        await chat_with_gpt(message)
+    """
+    Обработка новых сообщений.
+    """
+    try:
+        # Игнорируем команды
+        if message.text and message.text.startswith('/'):
+            return
+
+        # Проверяем, является ли сообщение текстом
+        if message.content_type == ContentType.TEXT:
+            # Игнорируем служебные сообщения из групп
+            if message.chat.type != ChatType.PRIVATE:
+                # Проверяем, что сообщение не автоматическое
+                if message.is_automatic_forward or message.forward_from:
+                    return
+                
+            # Обрабатываем текстовые сообщения
+            await chat_with_gpt(message)
+
+        else:
+            # Обрабатываем голосовые сообщения или их промежуточные версии только в группах
+            if message.content_type == ContentType.VOICE or message.content_type == ContentType.AUDIO:
+                await message.reply("🎙️ Мы получили ваше голосовое сообщение и преобразуем его.")
+                # TODO: Здесь можно интегрировать службу обработки аудио
+
+    except Exception as e:
+        logger.error(f"Ошибка в handle_messages: {str(e)}")
+        if message.chat.type == ChatType.PRIVATE:
+            await message.reply("❌ Произошла ошибка при обработке сообщения")
+
+@dp.edited_message()
+async def handle_edited_messages(message: Message):
+    """
+    Обработка редактированных сообщений (например, сгенерированного текста после аудио).
+    """
+    try:
+        # Логируем редактированное сообщение
+        logger.info(f"Обнаружено редактирование сообщения: {message.text}")
+        
+        # Проверяем, редактировано ли SaluteSpeech или другой бот, текст доступен
+        if message.content_type == ContentType.TEXT and message.text:
+            if message.chat.type != ChatType.PRIVATE:
+                # Игнорируем сообщения от других ботов в группах
+                if message.from_user.is_bot:
+                    return
+            
+            # После редактирования обрабатываем текст
+            await chat_with_gpt(message)
+
+    except Exception as e:
+        logger.error(f"Ошибка в обработке редактированных сообщений: {str(e)}")
+        if message.chat.type == ChatType.PRIVATE:
+            await message.reply("❌ Ошибка при обработке редактированного сообщения")
 
 # === Запуск бота ===
 async def main():
