@@ -145,7 +145,7 @@ async def model_selected(callback_query: types.CallbackQuery):
     else:
         await callback_query.answer("❌ Invalid model selection.", show_alert=True)
 
-dp.message.register(start_new_chat, Command("start"))
+dp.message.register(start, Command("start"))
 dp.message.register(start_new_chat, Command("startnewchat"))
 dp.message.register(set_model_command, Command("setmodel"))
 dp.message.register(current_model, Command("currentmodel"))
