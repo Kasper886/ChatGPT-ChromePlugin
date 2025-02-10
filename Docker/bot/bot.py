@@ -8,6 +8,7 @@ from aiogram import Bot, Dispatcher, types
 from aiogram.types import Message, ReplyKeyboardRemove, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.filters import Command
 from aiogram.enums import ChatType
+from aiogram.types import ContentType
 from dotenv import load_dotenv
 from models_list import AVAILABLE_MODELS  # Import available models from an external file
 
@@ -70,19 +71,31 @@ selected_model = load_selected_model()
 
 async def chat_with_gpt(message: Message):
     try:
-        # Добавляем логирование входящего сообщения
+        # Расширенное логирование для отладки
+        logging.info(f"📝 DEBUG: Message type: {message.content_type}")
+        logging.info(f"📝 DEBUG: Full message object: {message}")
+        
+        # Проверяем тип сообщения
+        if message.content_type != 'text':
+            logging.info(f"⚠️ Received non-text message: {message.content_type}")
+            await message.answer("❌ Пожалуйста, отправьте текстовое сообщение")
+            return # Завершаем выполнение функции
+
+        if not message.text:
+            logging.info("⚠️ Received empty text message")
+            await message.answer("❌ Сообщение не содержит текста")
+            return # Завершаем выполнение функции
+
+        # Логируем входящее сообщение
         logging.info(f"📝 DEBUG: Incoming message: {message.text}")
         
-        # Проверяем, существует ли текст и очищаем его
+        # Очищаем сообщение
         user_message = clean_message(message.text)
-
-        # Добавим еще один лог после очистки для сравнения
         logging.info(f"📝 DEBUG: Cleaned message: {user_message}")
 
-        if not user_message:  # Если сообщение пустое после очистки
-            await message.answer("❌ Ваше сообщение не содержит текста для обработки.")
-            return  # Завершаем выполнение функции
-
+        if not user_message:
+            await message.answer("❌ После обработки сообщение не содержит текста")
+            return # Завершаем выполнение функции
         # Проверяем, существует ли файл чата
         if not current_chat_file or not os.path.exists(current_chat_file):
             await message.answer("❌ Please start a new chat with /startnewchat")
@@ -197,6 +210,36 @@ def clean_message(text: str) -> str:
     # Возвращаем очищенный текст (или пустую строку, если текста не осталось)
     return text if text else ""
 
+# Обработчик сообщений
+@dp.message()
+async def handle_messages(message: Message):
+    try:
+        if message.content_type == ContentType.VOICE:
+            logging.info("🎤 Received voice message")
+            await message.answer("Я пока не умею обрабатывать голосовые сообщения")
+            return
+            
+        elif message.content_type == ContentType.STICKER:
+            logging.info("🎯 Received sticker")
+            await message.answer("Я пока не умею обрабатывать стикеры")
+            return
+            
+        elif message.content_type == ContentType.PHOTO:
+            logging.info("📷 Received photo")
+            await message.answer("Я пока не умею обрабатывать фотографии")
+            return
+            
+        elif message.content_type == ContentType.TEXT:
+            await chat_with_gpt(message)
+            
+        else:
+            logging.info(f"❓ Received unknown content type: {message.content_type}")
+            await message.answer("Этот тип сообщений не поддерживается")
+            
+    except Exception as e:
+        logging.error(f"❌ Error in message handler: {str(e)}")
+        await message.answer("Произошла ошибка при обработке сообщения")
+
 dp.message.register(start, Command("start"))
 dp.message.register(start_new_chat, Command("startnewchat"))
 dp.message.register(set_model_command, Command("setmodel"))
@@ -204,7 +247,8 @@ dp.message.register(current_model, Command("currentmodel"))
 dp.callback_query.register(model_selected)
 #dp.message.register(chat_with_gpt)
 # Используем ChatType напрямую
-dp.message.register(chat_with_gpt, lambda message: message.chat.type in [ChatType.PRIVATE, ChatType.GROUP, ChatType.SUPERGROUP])
+# dp.message.register(chat_with_gpt, lambda message: message.chat.type in [ChatType.PRIVATE, ChatType.GROUP, ChatType.SUPERGROUP])
+dp.message.register(handle_messages)
 
 async def main():
     logging.info("Starting bot...")
