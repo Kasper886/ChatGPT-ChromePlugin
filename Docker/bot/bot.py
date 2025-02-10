@@ -247,7 +247,7 @@ dp.message.register(current_model, Command("currentmodel"))
 dp.callback_query.register(model_selected)
 #dp.message.register(chat_with_gpt)
 # Используем ChatType напрямую
-# dp.message.register(chat_with_gpt, lambda message: message.chat.type in [ChatType.PRIVATE, ChatType.GROUP, ChatType.SUPERGROUP])
+dp.message.register(chat_with_gpt, lambda message: message.chat.type in [ChatType.PRIVATE, ChatType.GROUP, ChatType.SUPERGROUP])
 dp.message.register(handle_messages)
 
 async def main():
