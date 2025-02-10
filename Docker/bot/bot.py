@@ -70,8 +70,14 @@ selected_model = load_selected_model()
 
 async def chat_with_gpt(message: Message):
     try:
+        # Добавляем логирование входящего сообщения
+        logging.info(f"📝 DEBUG: Incoming message: {message.text}")
+        
         # Проверяем, существует ли текст и очищаем его
         user_message = clean_message(message.text)
+
+        # Добавим еще один лог после очистки для сравнения
+        logging.info(f"📝 DEBUG: Cleaned message: {user_message}")
 
         if not user_message:  # Если сообщение пустое после очистки
             await message.answer("❌ Ваше сообщение не содержит текста для обработки.")
