@@ -5,140 +5,153 @@ import os
 from datetime import datetime
 from flask import Flask
 from aiogram import Bot, Dispatcher, types
-from aiogram.types import Message, ContentType, ReplyKeyboardRemove, InlineKeyboardMarkup, InlineKeyboardButton
-from aiogram.filters import Command
+from aiogram.types import Message
+from aiogram.filters import Command, CommandStart
+from aiogram.enums import ContentType
 from dotenv import load_dotenv
-from models_list import AVAILABLE_MODELS  # Import available models from an external file
+from models_list import AVAILABLE_MODELS
 
-# Load environment variables
-load_dotenv()
+# Настройка логирования
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(),
+        logging.FileHandler('bot.log')
+    ]
+)
+logger = logging.getLogger(__name__)
 
-TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+try:
+    # Load environment variables
+    load_dotenv()
 
-bot = Bot(token=TELEGRAM_BOT_TOKEN)
-dp = Dispatcher()
-app = Flask(__name__)
+    TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+    OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
-openai.api_key = OPENAI_API_KEY
+    if not TELEGRAM_BOT_TOKEN:
+        raise ValueError("TELEGRAM_BOT_TOKEN не найден в .env файле")
+    if not OPENAI_API_KEY:
+        raise ValueError("OPENAI_API_KEY не найден в .env файле")
 
-# File to store the selected model persistently
-SELECTED_MODEL_FILE = "selected_model.txt"
-DEFAULT_MODEL = "gpt-3.5-turbo"  # Default model if no file exists
+    # Initialize bot and dispatcher
+    bot = Bot(token=TELEGRAM_BOT_TOKEN)
+    dp = Dispatcher()
 
-# Logging configuration
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+    # Configure OpenAI
+    openai.api_key = OPENAI_API_KEY
 
-# Global variable to track current chat file
-current_chat_file = None
+    # Constants
+    SELECTED_MODEL_FILE = "selected_model.txt"
+    DEFAULT_MODEL = "gpt-3.5-turbo"
 
+    # Global variables
+    current_chat_file = None
+    
+except Exception as e:
+    logger.error(f"Ошибка инициализации: {str(e)}")
+    raise
 
-# ==== UTILITY FUNCTIONS ====
-def create_new_chat_file():
-    """
-    Creates a new chat log file with a timestamp.
-    """
-    global current_chat_file
-    timestamp = datetime.now().strftime("chat-%d-%m-%y-%H-%M-%S.txt")
-    current_chat_file = timestamp
-    with open(current_chat_file, "w") as f:
-        f.write("Chat started\n")
-    logging.info(f"New chat file created: {current_chat_file}")
-
-
-def append_to_chat_file(text):
-    """
-    Appends text to the chat log file.
-    """
-    if current_chat_file:
-        with open(current_chat_file, "a") as f:
-            f.write(text + "\n")
-
-
-def save_selected_model(model_name):
-    """
-    Saves the selected model to a file.
-    """
+# Вспомогательные функции
+async def create_new_chat_file():
     try:
-        with open(SELECTED_MODEL_FILE, "w") as f:
-            f.write(model_name)
-        logging.info(f"✅ Model {model_name} saved.")
+        global current_chat_file
+        timestamp = datetime.now().strftime("chat-%d-%m-%y-%H-%M-%S.txt")
+        current_chat_file = timestamp
+        with open(current_chat_file, "w", encoding='utf-8') as f:
+            f.write("Chat started\n")
+        logger.info(f"New chat file created: {current_chat_file}")
     except Exception as e:
-        logging.error(f"❌ Error saving model: {str(e)}")
+        logger.error(f"Ошибка создания файла чата: {str(e)}")
+        raise
 
+async def append_to_chat_file(text):
+    try:
+        if current_chat_file:
+            with open(current_chat_file, "a", encoding='utf-8') as f:
+                f.write(text + "\n")
+    except Exception as e:
+        logger.error(f"Ошибка записи в файл чата: {str(e)}")
 
-def load_selected_model():
-    """
-    Loads the selected model from a file.
-    """
+async def save_selected_model(model_name):
+    try:
+        with open(SELECTED_MODEL_FILE, "w", encoding='utf-8') as f:
+            f.write(model_name)
+        logger.info(f"✅ Model {model_name} saved.")
+    except Exception as e:
+        logger.error(f"❌ Error saving model: {str(e)}")
+
+async def load_selected_model():
     try:
         if os.path.exists(SELECTED_MODEL_FILE):
-            with open(SELECTED_MODEL_FILE, "r") as f:
+            with open(SELECTED_MODEL_FILE, "r", encoding='utf-8') as f:
                 model = f.read().strip()
                 if model in AVAILABLE_MODELS:
                     return model
         return DEFAULT_MODEL
     except Exception as e:
-        logging.error(f"❌ Error loading model: {str(e)}")
+        logger.error(f"❌ Error loading model: {str(e)}")
         return DEFAULT_MODEL
 
-
-selected_model = load_selected_model()
-
-
 def clean_message(text: str) -> str:
-    """
-    Cleans the input message by removing unnecessary phrases
-    or unwanted content like "Голосовое сообщение".
-    """
-    if not text:  # If the text is None or empty
+    if not text:
+        return ""
+    try:
+        unwanted_phrases = [
+            "Голосовое сообщение",
+            "Voice message",
+            "Аудиосообщение",
+            "Audio message",
+        ]
+        for phrase in unwanted_phrases:
+            text = text.replace(phrase, "").strip()
+        return text if text else ""
+    except Exception as e:
+        logger.error(f"Ошибка очистки сообщения: {str(e)}")
         return ""
 
-    # Remove unwanted phrases
-    unwanted_phrases = [
-        "Голосовое сообщение",
-        "Voice message",
-        "Аудиосообщение",
-        "Audio message",
-    ]
-    for phrase in unwanted_phrases:
-        text = text.replace(phrase, "").strip()
-
-    return text if text else ""
-
-
-# ==== BOT HANDLERS ====
-async def chat_with_gpt(message: Message):
-    """
-    Processes a user's message and generates a response using OpenAI's API.
-    """
+# Обработчики команд
+@dp.message(CommandStart())
+async def cmd_start(message: Message):
     try:
-        # Log incoming messages
-        logging.info(f"📝 DEBUG: Full message object: {message}")
-        logging.info(f"📝 DEBUG: Chat type: {message.chat.type}")
-        logging.info(f"📝 DEBUG: Original text: {message.text}")
+        await message.answer("Привет! Используйте /startnewchat для начала нового чата.")
+    except Exception as e:
+        logger.error(f"Ошибка в команде start: {str(e)}")
 
-        # Clean and prepare the message
+@dp.message(Command("startnewchat"))
+async def start_new_chat(message: Message):
+    try:
+        await create_new_chat_file()
+        timestamp = datetime.now().strftime("%d.%m.%Y %H:%M:%S")
+        await message.answer(f"🆕 Новая сессия начата: {timestamp}")
+    except Exception as e:
+        logger.error(f"Ошибка в startnewchat: {str(e)}")
+        await message.answer("❌ Ошибка при создании нового чата")
+
+# Обработчик текстовых сообщений
+async def chat_with_gpt(message: Message):
+    try:
+        logger.info(f"Входящее сообщение от {message.from_user.id}: {message.text}")
+
+        if not message.text:
+            await message.answer("❌ Пустое сообщение")
+            return
+
         user_message = clean_message(message.text)
-        logging.info(f"📝 DEBUG: Cleaned message: {user_message}")
-
-        if not user_message:  # Ignore empty messages after cleaning
-            await message.reply("❌ Сообщение не содержит текста для обработки.")
+        if not user_message:
+            await message.answer("❌ Сообщение не содержит текста для обработки")
             return
 
-        # Check if the chat file exists
         if not current_chat_file or not os.path.exists(current_chat_file):
-            await message.reply("❌ Используйте /startnewchat для начала нового чата.")
+            await message.answer("❌ Начните новый чат командой /startnewchat")
             return
 
-        # Load selected model
-        selected_model = load_selected_model()
-        logging.info(f"🤖 Using model: {selected_model}")
+        selected_model = await load_selected_model()
+        client = openai.OpenAI(api_key=OPENAI_API_KEY)
 
-        # Load the chat history
         messages = []
-        if current_chat_file and os.path.exists(current_chat_file):
-            with open(current_chat_file, "r") as f:
+        try:
+            with open(current_chat_file, "r", encoding='utf-8') as f:
                 for line in f:
                     if line.startswith("User:"):
                         content = clean_message(line.replace("User: ", "").strip())
@@ -148,70 +161,56 @@ async def chat_with_gpt(message: Message):
                         content = line.replace("Bot: ", "").strip()
                         if content:
                             messages.append({"role": "assistant", "content": content})
+        except Exception as e:
+            logger.error(f"Ошибка чтения истории чата: {str(e)}")
+            messages = []
 
-        # Add the new message to the conversation
         messages.append({"role": "user", "content": user_message})
 
-        # Call OpenAI API
-        client = openai.OpenAI(api_key=OPENAI_API_KEY)
         response = client.chat.completions.create(
             model=selected_model,
             messages=messages
         )
 
-        actual_model = response.model
         bot_response = response.choices[0].message.content
+        actual_model = response.model
 
-        # Format the reply
-        reply_text = f"(🔹 Model: {actual_model})\n{bot_response}"
+        await append_to_chat_file(f"User: {user_message}")
+        await append_to_chat_file(f"Bot: {bot_response}")
 
-        # Save the chat to the file
-        append_to_chat_file(f"User: {user_message}")
-        append_to_chat_file(f"Bot: {bot_response}")
-
-        # Send the response
-        await message.reply(reply_text)
+        await message.answer(f"(🔹 Model: {actual_model})\n{bot_response}")
 
     except Exception as e:
-        logging.error(f"❌ Error in chat_with_gpt: {str(e)}")
-        await message.reply(f"Произошла ошибка: {str(e)}")
+        logger.error(f"Ошибка в chat_with_gpt: {str(e)}")
+        await message.answer(f"❌ Произошла ошибка: {str(e)}")
 
-
-@dp.message(Command("startnewchat"))
-async def start_new_chat(message: Message):
-    """
-    Starts a new chat session by creating a new log file.
-    """
-    create_new_chat_file()
-    timestamp = datetime.now().strftime("%d.%m.%Y %H:%M:%S")
-    await message.reply(f"🆕 Новый чат начат: {timestamp}")
-
-
-@dp.message(ContentType.TEXT)
-async def handle_messages(message: Message):
-    """
-    Routes text messages to chat_with_gpt and handles non-text content.
-    """
-    if message.text.startswith("/"):
-        logging.info(f"🔧 Command received: {message.text}")
-        return  # Ignore commands here, they will be handled separately
-
-    await chat_with_gpt(message)
-
-
+# Общий обработчик сообщений
 @dp.message()
-async def handle_non_text_messages(message: Message):
-    """
-    Handles non-text messages such as voice, photo, etc.
-    """
-    logging.info(f"📌 Received non-text content: {message.content_type}")
-    await message.reply("❌ Этот тип сообщений не поддерживается. Отправьте текст.")
-
+async def handle_messages(message: Message):
+    try:
+        if message.content_type == ContentType.TEXT:
+            if not message.text.startswith('/'):
+                await chat_with_gpt(message)
+        else:
+            logger.info(f"Получено сообщение типа: {message.content_type}")
+            await message.answer("❌ Поддерживаются только текстовые сообщения")
+    except Exception as e:
+        logger.error(f"Ошибка в handle_messages: {str(e)}")
+        await message.answer("❌ Произошла ошибка при обработке сообщения")
 
 async def main():
-    logging.info("Starting bot...")
-    await dp.start_polling(bot)
-
+    try:
+        logger.info("Запуск бота...")
+        await dp.start_polling(bot)
+    except Exception as e:
+        logger.error(f"Ошибка при запуске бота: {str(e)}")
+        raise
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except (KeyboardInterrupt, SystemExit):
+        logger.info("Бот остановлен")
+    except Exception as e:
+        logger.error(f"Критическая ошибка: {str(e)}")
+        raise
