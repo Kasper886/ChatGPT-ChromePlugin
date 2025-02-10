@@ -70,31 +70,43 @@ selected_model = load_selected_model()
 
 async def chat_with_gpt(message: Message):
     try:
-        # Проверяем, существует ли сообщение и не является ли оно пустым
-        if not message.text:
-            return
-        
-        # Проверяем, существует ли файл с историей чата
+        # Проверяем, существует ли текст и очищаем его
+        user_message = clean_message(message.text)
+
+        if not user_message:  # Если сообщение пустое после очистки
+            await message.answer("❌ Ваше сообщение не содержит текста для обработки.")
+            return  # Завершаем выполнение функции
+
+        # Проверяем, существует ли файл чата
         if not current_chat_file or not os.path.exists(current_chat_file):
             await message.answer("❌ Please start a new chat with /startnewchat")
             return  # Завершаем выполнение функции
         
-        user_message = message.text
+        # Загружаем текущую модель
         selected_model = load_selected_model()
         logging.info(f"📝 DEBUG: Sending request to ChatGPT with model: {selected_model} and message: {user_message}")
 
+        # Инициализируем OpenAI-клиент
         client = openai.OpenAI(api_key=OPENAI_API_KEY)
 
+        # Загружаем историю сообщений
         messages = []
         if current_chat_file and os.path.exists(current_chat_file):
             with open(current_chat_file, "r") as f:
                 for line in f:
                     if line.startswith("User:"):
-                        messages.append({"role": "user", "content": line.replace("User: ", "").strip()})
+                        content = clean_message(line.replace("User: ", "").strip())
+                        if content:
+                            messages.append({"role": "user", "content": content})
                     elif line.startswith("Bot:"):
-                        messages.append({"role": "assistant", "content": line.replace("Bot: ", "").strip()})
+                        content = clean_message(line.replace("Bot: ", "").strip())
+                        if content:
+                            messages.append({"role": "assistant", "content": content})
+
+        # Добавляем новое сообщение пользователя
         messages.append({"role": "user", "content": user_message})
 
+        # Обрабатываем запрос в ChatGPT
         response = client.chat.completions.create(
             model=selected_model,
             messages=messages
@@ -106,14 +118,17 @@ async def chat_with_gpt(message: Message):
         logging.info(f"✅ DEBUG: Used model: {actual_model}")
         reply_text = f"(🔹 Real Model ID: {actual_model})\n{bot_response}"
 
-        # Append conversation to chat file
+        # Сохраняем диалог в файл
         append_to_chat_file(f"User: {user_message}")
         append_to_chat_file(f"Bot: {bot_response}")
 
+        # Отвечаем пользователю
         await message.answer(reply_text)
+
     except Exception as e:
         logging.error(f"❌ ERROR in chat_with_gpt: {str(e)}")
         await message.answer(f"Error: {str(e)}")
+
 
 async def start(message: Message):
     await message.answer(f"Please select a model with /setmodel (current model is gpt-3.5 turbo) and start a new chat with /startnewchat")
@@ -149,6 +164,24 @@ async def model_selected(callback_query: types.CallbackQuery):
         await callback_query.message.edit_text(f"✅ Model changed to: {model_name}")
     else:
         await callback_query.answer("❌ Invalid model selection.", show_alert=True)
+
+def clean_message(text: str) -> str:
+    """
+    Фильтрует и очищает текст сообщений.
+    """
+    if not text:  # Проверяем, что сообщение не пустое
+        return ""
+
+    # Убираем системные фразы
+    unwanted_phrases = ["Голосовое сообщение"]  # Если есть другие шаблоны, добавьте сюда
+    for phrase in unwanted_phrases:
+        text = text.replace(phrase, "").strip()
+
+    # Убираем ссылки, упоминания пользователей, и другие вспомогательные элементы
+    text = text.split(':', 1)[-1].strip()  # Убираем "User:" в случае групп
+    text = text.replace("@", "").strip()  # Убираем упоминания
+
+    return text if text else ""
 
 dp.message.register(start, Command("start"))
 dp.message.register(start_new_chat, Command("startnewchat"))
