@@ -69,6 +69,11 @@ selected_model = load_selected_model()
 
 async def chat_with_gpt(message: Message):
     try:
+        # Проверяем, существует ли файл с историей чата
+        if not current_chat_file or not os.path.exists(current_chat_file):
+            await message.answer("❌ Please start a new chat with /startnewchat")
+            return  # Завершаем выполнение функции
+        
         user_message = message.text
         selected_model = load_selected_model()
         logging.info(f"📝 DEBUG: Sending request to ChatGPT with model: {selected_model} and message: {user_message}")
