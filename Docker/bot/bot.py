@@ -189,8 +189,11 @@ async def chat_with_gpt(message: Message):
         # Добавляем новое сообщение пользователя
         messages.append({"role": "user", "content": user_message})
 
+        # Создаем клиент OpenAI и отправляем запрос
+        client = openai.OpenAI(api_key=OPENAI_API_KEY)
+        
         # Отправляем запрос в ChatGPT
-        response = openai.ChatCompletion.create(
+        response = client.chat.completions.create(
             model=selected_model,
             messages=messages
         )
