@@ -136,7 +136,7 @@ async def chat_with_gpt_proxy(message: Message, cleaned_text: str):
     )
     await chat_with_gpt(fake_message)
 
-### @router.message() раскомментируйте, чтобы использовать распознавание речи
+#@router.message() 
 async def chat_with_gpt(message: Message):
     try:
         user_message = message.text.strip()
@@ -160,36 +160,58 @@ async def chat_with_gpt(message: Message):
         logger.error(f"Ошибка в chat_with_gpt: {str(e)}")
         await message.reply("❌ Ошибка обработки сообщения.")
 
+
 # === Использование этой обработки вместо chat_with_gpt
+SALUTESPEECH_BOT_ID = 8036450123
+
+import re
+
+# Узнай ID SaluteSpeech Bot и замени здесь
+SALUTESPEECH_BOT_ID = 123456789  # Замени на реальный ID
+
+def clean_transcribed_message(text: str) -> str:
+    """Очищает текст от ненужных элементов."""
+    patterns_to_remove = [
+        r"Голосовое сообщение от .+?:",  # Убираем имя отправителя
+        r"Голосовое сообщение$",
+    ]
+    
+    for pattern in patterns_to_remove:
+        text = re.sub(pattern, "", text).strip()
+
+    return text if text else None
+
+async def chat_with_gpt_proxy(message: Message, cleaned_text: str):
+    """Обертка для вызова chat_with_gpt с очищенным текстом."""
+    fake_message = Message(
+        message_id=message.message_id,
+        from_user=message.from_user,
+        chat=message.chat,
+        text=cleaned_text
+    )
+    await chat_with_gpt(fake_message)
+
 @router.message()
 async def handle_messages(message: Message):
-    # 1. Игнорируем голосовые сообщения
+    """Обрабатывает обычные сообщения и текстовые сообщения от SaluteSpeech Bot."""
     if message.content_type == ContentType.VOICE:
-        return
+        return  # Игнорируем аудио
     
-    # 2. Проверяем, что сообщение от SaluteSpeech Bot
-    if message.from_user.username == "smartspeech_sber_bot":
-        text = message.text or message.caption
+    if message.from_user.id == SALUTESPEECH_BOT_ID:
+        text = message.text or message.caption  # Telegram может отправлять текст в caption
         
-        # Фильтруем сообщения "Получено аудио"
-        if text.lower() == "получено аудио":
-            return
-
-        # Удаляем лишние атрибуты, такие как "Голосовое сообщение" и имя отправителя
-        cleaned_text = clean_transcribed_message(text)
-        
-        # Отправляем в GPT только очищенный текст
-        if cleaned_text:
-            await chat_with_gpt_proxy(message, cleaned_text)
+        if text and text.lower() != "получено аудио":
+            cleaned_text = clean_transcribed_message(text)
+            if cleaned_text:
+                await chat_with_gpt_proxy(message, cleaned_text)
 
     else:
-        # Если обычный пользователь, передаем сообщение в GPT
         await chat_with_gpt(message)
 
 @router.edited_message()
 async def handle_edited_messages(message: Message):
     """Обрабатывает редактированные сообщения (замена аудио на текст от SaluteSpeech Bot)."""
-    if message.from_user.id == "smartspeech_sber_bot":
+    if message.from_user.id == SALUTESPEECH_BOT_ID:
         text = message.text or message.caption
         
         if text and text.lower() != "получено аудио":
