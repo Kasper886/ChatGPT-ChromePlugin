@@ -204,6 +204,18 @@ async def handle_messages(message: Message):
     else:
         await chat_with_gpt(message)
 
+# === Обработка всех сообщений ===
+
+@router.message()
+async def debug_all_messages(message: Message):
+    """Логирует ВСЕ входящие сообщения, чтобы понять, какие данные приходят."""
+    logger.info(f"=== Получено сообщение ===")
+    logger.info(f"От: {message.from_user.full_name} (ID: {message.from_user.id}, Username: {message.from_user.username})")
+    logger.info(f"Тип контента: {message.content_type}")
+    logger.info(f"Текст: {message.text or message.caption}")
+    logger.info(f"=========================")
+
+
 # === Запуск бота ===
 dp.include_router(router)
 
