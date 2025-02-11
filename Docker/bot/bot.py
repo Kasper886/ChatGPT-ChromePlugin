@@ -108,7 +108,7 @@ async def handle_messages(message: Message):
         if message.text and message.text.startswith("/"):
             return
 
-        logger.info(f"Получено сообщение от: {message.from_user.full_name} type: {message.type} {message.text}")
+        logger.info(f"Получено сообщение от: {message.from_user.full_name} {message.text}")
         # Обрабатываем текстовые сообщения
         if message.content_type == ContentType.TEXT:
             logger.info(f"Получено сообщение от: {message.from_user.full_name} {message.text}")
