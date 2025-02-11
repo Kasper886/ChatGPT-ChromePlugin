@@ -166,6 +166,7 @@ SALUTESPEECH_BOT_ID = 8036450123
 
 def clean_transcribed_message(text: str) -> str:
     """Очищает текст от ненужных элементов."""
+    logger.info(f"Очистка текста: {text}")
     patterns_to_remove = [
         r"Голосовое сообщение от .+?:",  # Убираем имя отправителя
         r"Голосовое сообщение$",
