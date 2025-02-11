@@ -8,6 +8,7 @@ from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKe
 from aiogram.filters import Command, CommandStart
 from aiogram.enums import ChatType, ContentType
 from dotenv import load_dotenv
+from models_list import AVAILABLE_MODELS  # Import available models from an external file
 
 # === Настройка логирования ===
 logging.basicConfig(
@@ -77,14 +78,14 @@ def clean_message(text: str) -> str:
 # === Обработчики команд ===
 @dp.message(CommandStart())
 async def cmd_start(message: Message):
-    if message.chat.type == ChatType.PRIVATE:  # Отвечаем только в личных чатах
-        await message.answer(
-            "👋 Привет! Я бот для общения с ChatGPT.\n\n"
-            "🤖 Доступные команды:\n"
-            "/startnewchat - Начать новый чат\n"
-            "/setmodel - Выбрать модель\n"
-            "/currentmodel - Текущая модель"
-        )
+    #if message.chat.type == ChatType.PRIVATE:  # Отвечаем только в личных чатах
+    await message.answer(
+        "👋 Привет! Я бот для общения с ChatGPT.\n\n"
+        "🤖 Доступные команды:\n"
+        "/startnewchat - Начать новый чат\n"
+        "/setmodel - Выбрать модель\n"
+        "/currentmodel - Текущая модель"
+    )
 
 @dp.message(Command("startnewchat"))
 async def start_new_chat(message: Message):
@@ -148,6 +149,30 @@ async def handle_edited_messages(message: Message):
 
     except Exception as e:
         logger.error(f"Ошибка в обработке редактированных сообщений: {str(e)}")
+
+# === Обработчики команд для выбора модели ===
+def set_model_command(message: Message):
+    # Создаем список кнопок по 2 в ряд
+    buttons = []
+    row = []
+    for i, model in enumerate(AVAILABLE_MODELS):
+        row.append(InlineKeyboardButton(text=model, callback_data=f"setmodel_{model}"))
+        if len(row) == 2 or i == len(AVAILABLE_MODELS) - 1:
+            buttons.append(row)
+            row = []
+
+    keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
+    return message.answer("Select a model:", reply_markup=keyboard)
+
+async def model_selected(callback_query: types.CallbackQuery):
+    model_name = callback_query.data.replace("setmodel_", "")
+    if model_name in AVAILABLE_MODELS:
+        save_selected_model(model_name)
+        global selected_model
+        selected_model = model_name
+        await callback_query.message.edit_text(f"✅ Модель изменена на: {model_name}")
+    else:
+        await callback_query.answer("❌ Ошибка выбора модели.", show_alert=True)
 
 # === Основная логика обработки с помощью ChatGPT ===
 async def chat_with_gpt(message: Message):
