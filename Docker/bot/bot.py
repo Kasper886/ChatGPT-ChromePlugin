@@ -51,7 +51,8 @@ async def create_new_chat_file():
         f.write("Chat started\n")
     logger.info(f"Новый файл чата создан: {current_chat_file}")
 
-async def append_to_chat_file(text):
+async def append_to_chat_file(text: str):
+    """Добавляет текст в текущий файл чата."""
     if current_chat_file:
         with open(current_chat_file, "a", encoding="utf-8") as f:
             f.write(text + "\n")
@@ -186,21 +187,50 @@ async def chat_with_gpt(message: Message):
         logger.error(f"Ошибка в chat_with_gpt: {str(e)}")
         await message.reply("❌ Ошибка обработки сообщения.")
 
+async def chat_with_gpt_file():
+    """Отправляет весь файл чата в GPT и получает ответ."""
+    try:
+        # Читаем содержимое файла чата
+        if not current_chat_file:
+            return "❌ Ошибка: Файл чата не найден."
+
+        with open(current_chat_file, "r", encoding="utf-8") as f:
+            chat_history = f.read()
+
+        # Отправляем в GPT
+        client = openai.OpenAI(api_key=OPENAI_API_KEY)
+        response = client.chat.completions.create(
+            model="gpt-4o",  # Можно сменить на нужную модель
+            messages=[{"role": "system", "content": "Ты — умный помощник."},
+                      {"role": "user", "content": chat_history}]
+        )
+
+        bot_response = response.choices[0].message.content
+
+        # Записываем ответ GPT в файл чата
+        await append_to_chat_file(f"Bot: {bot_response}")
+
+        return bot_response
+
+    except Exception as e:
+        logger.error(f"Ошибка в chat_with_gpt_file: {e}")
+        return "❌ Ошибка обработки сообщения."
+
 
 # === Использование этой обработки вместо chat_with_gpt
-SALUTESPEECH_BOT_ID = 5244379085
+# SALUTESPEECH_BOT_ID = 5244379085
 
-def clean_transcribed_message(text: str) -> str:
-    """Очищает текст от ненужных элементов."""
-    patterns_to_remove = [
-        r"Голосовое сообщение от .+?:",  # Убираем имя отправителя
-        r"Голосовое сообщение$",
-    ]
+# def clean_transcribed_message(text: str) -> str:
+#    """Очищает текст от ненужных элементов."""
+#    patterns_to_remove = [
+#        r"Голосовое сообщение от .+?:",  # Убираем имя отправителя
+#        r"Голосовое сообщение$",
+#    ]
     
-    for pattern in patterns_to_remove:
-        text = re.sub(pattern, "", text).strip()
+#    for pattern in patterns_to_remove:
+#        text = re.sub(pattern, "", text).strip()
 
-    return text if text else None
+#    return text if text else None
 
 # === Обработка всех сообщений ===
 #1
@@ -259,12 +289,13 @@ def clean_transcribed_message(text: str) -> str:
 
 @router.message()
 async def handle_messages(message: Message):
-    """Обрабатывает текстовые и голосовые сообщения."""
-    
-    # Если сообщение — голосовое, запускаем распознавание
+    """Обрабатывает текстовые и голосовые сообщения, записывает их в чат-файл и отправляет в GPT."""
+
+    # 🎤 Если пришло голосовое сообщение
     if message.content_type == ContentType.VOICE:
         logger.info("🎤 Получено голосовое сообщение, обрабатываем...")
-        
+
+        # Скачиваем голосовое сообщение
         voice_file = await bot.get_file(message.voice.file_id)
         voice_path = f"{voice_file.file_id}.ogg"
         await bot.download_file(voice_file.file_path, voice_path)
@@ -272,13 +303,28 @@ async def handle_messages(message: Message):
         # Распознаём текст
         text = await transcribe_audio(voice_path)
         if text:
-            logger.info(f"✅ Распознанный текст: {text}")
-            await message.reply(f"🎙 Расшифрованное сообщение: {text}")
+            logger.info(f"✅ Расшифрованный текст: {text}")
 
-        return  # Останавливаем обработку, так как голосовое сообщение уже обработано
+            # Убираем "Расшифрованное сообщение:"
+            cleaned_text = text.replace("Расшифрованное сообщение:", "").strip()
 
-    # Обычные текстовые сообщения передаем в GPT
-    await chat_with_gpt(message)
+            # Записываем в файл чата
+            await append_to_chat_file(f"User: {cleaned_text}")
+
+            # Отправляем содержимое файла в GPT и получаем ответ
+            response = await chat_with_gpt_file()
+            await message.reply(response)
+
+        return  # Завершаем обработку
+
+    # 📄 Если пришло текстовое сообщение
+    user_message = message.text.strip()
+    if user_message:
+        await append_to_chat_file(f"User: {user_message}")
+
+        # Отправляем содержимое файла в GPT
+        response = await chat_with_gpt_file()
+        await message.reply(response)
 
 # === Запуск бота ===
 dp.include_router(router)
