@@ -216,34 +216,34 @@ async def debug_all_updates(update):
 
 @router.message()
 async def handle_messages(message: Message):
-    """Обрабатывает текстовые сообщения, включая ответы от SaluteSpeech Bot."""
-    
+    """Обрабатывает сообщения, включая ответы от SaluteSpeech Bot (reply)."""
+
     # 1. Игнорируем голосовые сообщения
     if message.content_type == ContentType.VOICE:
         return  
-    
-    # 2. Проверяем, является ли сообщение ответом (reply)
+
+    # 2. Если сообщение является reply, проверяем, кому оно адресовано
     if message.reply_to_message:
-        logger.info(f"✅ Обнаружен reply: {message.reply_to_message.message_id}")
+        logger.info(f"✅ Обнаружен reply на сообщение: {message.reply_to_message.message_id}")
 
-    # 3. Проверяем, пришло ли сообщение от SaluteSpeech Bot
-    if message.from_user.id == SALUTESPEECH_BOT_ID:
-        text = message.text or message.caption  # Telegram может отправлять текст в caption
+        # Проверяем, ответ ли это на голосовое сообщение
+        if message.reply_to_message.content_type == ContentType.VOICE:
+            logger.info(f"✅ Reply является ответом на голосовое сообщение")
 
-        logger.info(f"✅ Получено сообщение от SaluteSpeech Bot: {text}")
+            text = message.text or message.caption
+            if text:
+                logger.info(f"✅ Текст от SaluteSpeech Bot: {text}")
 
-        if text and text.lower() != "получено аудио":
-            cleaned_text = clean_transcribed_message(text)
+                cleaned_text = clean_transcribed_message(text)
+                if cleaned_text:
+                    logger.info(f"✅ Очищенный текст: {cleaned_text}")
 
-            if cleaned_text:
-                logger.info(f"✅ Очищенный текст: {cleaned_text}")
+                    # Отправляем обработанный текст в GPT
+                    await chat_with_gpt_proxy(message, cleaned_text)
+                    return
 
-                # Отправляем обработанный текст в GPT
-                await chat_with_gpt_proxy(message, cleaned_text)
-
-    else:
-        # Если сообщение от обычного пользователя, передаем его в GPT
-        await chat_with_gpt(message)
+    # 3. Если это обычное сообщение от пользователя, отправляем в GPT
+    await chat_with_gpt(message)
 
 # === Запуск бота ===
 dp.include_router(router)
