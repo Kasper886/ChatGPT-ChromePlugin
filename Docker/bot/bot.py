@@ -103,6 +103,7 @@ async def handle_messages(message: Message):
     """
     Обработка новых сообщений (текстовых или голосовых).
     """
+    logger.info(f"Получено сообщение от: {message.from_user.full_name} type: {message.type} {message.text}")
     try:
         # Проверяем команды
         if message.text and message.text.startswith("/"):
