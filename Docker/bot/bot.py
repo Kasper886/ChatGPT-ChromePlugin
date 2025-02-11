@@ -164,11 +164,6 @@ async def chat_with_gpt(message: Message):
 # === Использование этой обработки вместо chat_with_gpt
 SALUTESPEECH_BOT_ID = 8036450123
 
-import re
-
-# Узнай ID SaluteSpeech Bot и замени здесь
-SALUTESPEECH_BOT_ID = 123456789  # Замени на реальный ID
-
 def clean_transcribed_message(text: str) -> str:
     """Очищает текст от ненужных элементов."""
     patterns_to_remove = [
