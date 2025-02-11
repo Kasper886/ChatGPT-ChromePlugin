@@ -164,6 +164,8 @@ def set_model_command(message: Message):
     keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
     return message.answer("Select a model:", reply_markup=keyboard)
 
+dp.message.register(set_model_command, Command("setmodel"))
+
 async def model_selected(callback_query: types.CallbackQuery):
     model_name = callback_query.data.replace("setmodel_", "")
     if model_name in AVAILABLE_MODELS:
