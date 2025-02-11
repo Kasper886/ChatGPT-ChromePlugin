@@ -151,7 +151,8 @@ async def handle_edited_messages(message: Message):
         logger.error(f"Ошибка в обработке редактированных сообщений: {str(e)}")
 
 # === Обработчики команд для выбора модели ===
-def set_model_command(message: Message):
+@dp.message(Command("setmodel"))
+async def set_model_command(message: Message):
     # Создаем список кнопок по 2 в ряд
     buttons = []
     row = []
@@ -164,12 +165,10 @@ def set_model_command(message: Message):
     keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
     return message.answer("Select a model:", reply_markup=keyboard)
 
-dp.message.register(set_model_command, Command("setmodel"))
-
 async def model_selected(callback_query: types.CallbackQuery):
     model_name = callback_query.data.replace("setmodel_", "")
     if model_name in AVAILABLE_MODELS:
-        save_selected_model(model_name)
+        await save_selected_model(model_name)
         global selected_model
         selected_model = model_name
         await callback_query.message.edit_text(f"✅ Модель изменена на: {model_name}")
