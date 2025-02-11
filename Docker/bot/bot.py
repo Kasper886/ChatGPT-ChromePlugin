@@ -197,21 +197,38 @@ def clean_transcribed_message(text: str) -> str:
 #    logger.info(f"=========================")
 
 # === Edited messeges ===
-@router.edited_message()
-async def debug_edited_messages(message: Message):
-    """Логируем редактированные сообщения, которые могут быть от SaluteSpeech Bot."""
-    logger.info(f"=== Редактированное сообщение ===")
-    logger.info(f"От: {message.from_user.full_name} (ID: {message.from_user.id}, Username: {message.from_user.username})")
-    logger.info(f"Текст: {message.text or message.caption}")
-    logger.info(f"=========================")
+#@router.edited_message()
+#async def debug_edited_messages(message: Message):
+#    """Логируем редактированные сообщения, которые могут быть от SaluteSpeech Bot."""
+#    logger.info(f"=== Редактированное сообщение ===")
+#    logger.info(f"От: {message.from_user.full_name} (ID: {message.from_user.id}, Username: {message.from_user.username})")
+#    logger.info(f"Текст: {message.text or message.caption}")
+#    logger.info(f"=========================")
 
 # === Debug all updates ===
-@dp.update()
-async def debug_all_updates(update):
-    """Логирует ВСЕ обновления, чтобы увидеть, как Telegram передает измененный текст."""
-    logger.info(f"=== ПОЛУЧЕНО ОБНОВЛЕНИЕ ===")
-    logger.info(f"{update}")
-    logger.info(f"===========================")
+#@dp.update()
+#async def debug_all_updates(update):
+#    """Логирует ВСЕ обновления, чтобы увидеть, как Telegram передает измененный текст."""
+#    logger.info(f"=== ПОЛУЧЕНО ОБНОВЛЕНИЕ ===")
+#    logger.info(f"{update}")
+#    logger.info(f"===========================")
+
+# === Debug all updates 2 ===
+@router.message()
+async def debug_all_messages(message: Message):
+    """Логирует ВСЕ входящие сообщения, включая reply."""
+    logger.info(f"=== ПОЛУЧЕНО СООБЩЕНИЕ ===")
+    logger.info(f"От: {message.from_user.full_name} (ID: {message.from_user.id}, Username: {message.from_user.username})")
+    logger.info(f"Тип контента: {message.content_type}")
+    logger.info(f"Текст: {message.text or message.caption}")
+    
+    # Проверяем, является ли сообщение ответом (reply)
+    if message.reply_to_message:
+        logger.info(f"✅ Это reply на сообщение: {message.reply_to_message.message_id}")
+        logger.info(f"✅ Исходное сообщение (reply_to): {message.reply_to_message.text or message.reply_to_message.caption}")
+
+    logger.info(f"=========================")
+
 ##############################################
 
 @router.message()
