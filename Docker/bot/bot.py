@@ -110,18 +110,18 @@ async def handle_messages(message: Message):
 
         logger.info(f"Получено сообщение от: {message.from_user.full_name} {message.text}")
         # Обрабатываем текстовые сообщения
-        if message.content_type == ContentType.TEXT:
-            logger.info(f"Получено сообщение от: {message.from_user.full_name} {message.text}")
-            if message.chat.type != ChatType.PRIVATE:
-                # Игнорируем системные сообщения и сообщения от других ботов
-                if message.is_automatic_forward or message.from_user.is_bot:
-                    return
+        #if message.content_type == ContentType.TEXT:
+        #    logger.info(f"Получено сообщение от: {message.from_user.full_name} {message.text}")
+        #    if message.chat.type != ChatType.PRIVATE:
+        #        # Игнорируем системные сообщения и сообщения от других ботов
+        #        if message.is_automatic_forward or message.from_user.is_bot:
+        #            return
 
             # Отправляем текстовое сообщение на обработку
-            await chat_with_gpt(message)
+        await chat_with_gpt(message)
 
         # Обрабатываем голосовые сообщения
-        elif message.content_type == ContentType.VOICE:
+        if message.content_type == ContentType.VOICE:
             # Если получено голосовое сообщение
             await message.reply("🎙️ Мы получили ваше голосовое сообщение и преобразуем его.")
             logger.info(f"Получено голосовое сообщение от {message.from_user.full_name}")
