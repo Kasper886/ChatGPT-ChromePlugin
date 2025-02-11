@@ -129,18 +129,24 @@ async def model_selected(callback_query: CallbackQuery):
         await callback_query.answer("❌ Ошибка выбора модели.", show_alert=True)
 
 async def transcribe_audio(audio_path: str) -> str:
-    """Преобразует аудио в текст с помощью OpenAI Whisper API."""
+    """Преобразует аудио в текст с помощью OpenAI Whisper API (новый синтаксис)."""
     try:
-        # Конвертируем в формат MP3 (Whisper API лучше работает с MP3)
+        # Конвертируем OGG в MP3
         audio = AudioSegment.from_ogg(audio_path)
         mp3_path = audio_path.replace(".ogg", ".mp3")
         audio.export(mp3_path, format="mp3")
 
-        # Отправляем в OpenAI Whisper API
-        with open(mp3_path, "rb") as audio_file:
-            response = openai.Audio.transcribe("whisper-1", audio_file)
+        # Подключаемся к OpenAI API (новый способ)
+        client = openai.OpenAI(api_key=OPENAI_API_KEY)
 
-        return response["text"]
+        # Отправляем аудио на распознавание
+        with open(mp3_path, "rb") as audio_file:
+            response = client.audio.transcriptions.create(
+                model="whisper-1",
+                file=audio_file
+            )
+
+        return response.text
 
     except Exception as e:
         logger.error(f"Ошибка распознавания аудио: {e}")
