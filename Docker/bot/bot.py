@@ -126,7 +126,7 @@ async def chat_with_gpt(message: Message):
             messages=[{"role": "user", "content": user_message}]
         )
 
-        bot_response = response["choices"][0]["message"]["content"]
+        bot_response = response.choices[0].message.content
         await append_to_chat_file(f"User: {user_message}\nBot: {bot_response}")
         await message.reply(bot_response)
 
