@@ -289,7 +289,7 @@ async def chat_with_gpt_file():
 
 @router.message()
 async def handle_messages(message: Message):
-    """Обрабатывает текстовые и голосовые сообщения, записывает их в чат-файл и отправляет в GPT."""
+    """Обрабатывает текстовые и голосовые сообщения, записывает в чат-файл и отправляет в GPT."""
 
     # 🎤 Если пришло голосовое сообщение
     if message.content_type == ContentType.VOICE:
@@ -308,6 +308,9 @@ async def handle_messages(message: Message):
             # Убираем "Расшифрованное сообщение:"
             cleaned_text = text.replace("Расшифрованное сообщение:", "").strip()
 
+            # 📢 Отправляем в чат расшифрованное сообщение
+            await message.reply(f"🎙 Расшифрованный текст:\n{cleaned_text}")
+
             # Записываем в файл чата
             await append_to_chat_file(f"User: {cleaned_text}")
 
@@ -322,8 +325,12 @@ async def handle_messages(message: Message):
     if user_message:
         await append_to_chat_file(f"User: {user_message}")
 
-        # Отправляем содержимое файла в GPT
-        response = await chat_with_gpt_file()
+        # Используем `chat_with_gpt_file()` для диалога, `chat_with_gpt()` для одиночного ответа
+        if current_chat_file:
+            response = await chat_with_gpt_file()  # Диалог
+        else:
+            response = await chat_with_gpt(message)  # Одиночный ответ
+
         await message.reply(response)
 
 # === Запуск бота ===
