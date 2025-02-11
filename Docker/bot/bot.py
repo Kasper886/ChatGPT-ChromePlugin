@@ -3,6 +3,7 @@ import logging
 import openai
 import os
 import re
+import subprocess
 from pydub import AudioSegment
 from datetime import datetime
 from aiogram import Bot, Dispatcher, Router, types
@@ -40,6 +41,20 @@ SALUTESPEECH_BOT_USERNAME = "smartspeech_sber_bot"
 SELECTED_MODEL_FILE = "selected_model.txt"
 DEFAULT_MODEL = "gpt-3.5-turbo"
 current_chat_file = None
+
+# === Установка дополнительных модулей ===
+def install_ffmpeg():
+    """Автоматически устанавливает ffmpeg, если его нет (только для Linux)."""
+    try:
+        subprocess.run(["ffmpeg", "-version"], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        print("✅ ffmpeg уже установлен.")
+    except FileNotFoundError:
+        print("⚠️ ffmpeg не найден, устанавливаем...")
+        os.system("sudo apt update && sudo apt install -y ffmpeg")
+        print("✅ ffmpeg установлен!")
+
+# Проверяем и устанавливаем ffmpeg
+install_ffmpeg()
 
 # ==== Вспомогательные функции ====
 async def create_new_chat_file():
