@@ -1,5 +1,8 @@
 FROM python:3.9-slim
 
+# Обновляем пакеты и устанавливаем ffmpeg
+RUN apt update && apt install -y ffmpeg
+
 # Set the working directory
 WORKDIR /bot
 
