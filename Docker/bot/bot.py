@@ -189,13 +189,17 @@ async def chat_with_gpt_proxy(message: Message, cleaned_text: str):
 
 @router.message()
 async def handle_messages(message: Message):
+    logger.info(f"Входящее сообщение: {message}")
     """Обрабатывает обычные сообщения и текстовые сообщения от SaluteSpeech Bot."""
     if message.content_type == ContentType.VOICE:
+        logger.info("Получено аудио")
         return  # Игнорируем аудио
     
     if message.from_user.id == SALUTESPEECH_BOT_ID:
         text = message.text or message.caption  # Telegram может отправлять текст в caption
         
+        logger.info(f"Текст от SaluteSpeech Bot: {text}")
+
         if text and text.lower() != "получено аудио":
             cleaned_text = clean_transcribed_message(text)
             if cleaned_text:
