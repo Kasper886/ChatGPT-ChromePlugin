@@ -65,6 +65,7 @@ async def load_selected_model():
     return DEFAULT_MODEL
 
 def clean_message(text: str) -> str:
+    
     """
     Очищает текст сообщения от служебных фраз (например, «Голосовое сообщение»).
     """
@@ -109,6 +110,7 @@ async def handle_messages(message: Message):
 
         # Обрабатываем текстовые сообщения
         if message.content_type == ContentType.TEXT:
+            logger.info(f"Получено сообщение от: {message.from_user.full_name} {message.text}")
             if message.chat.type != ChatType.PRIVATE:
                 # Игнорируем системные сообщения и сообщения от других ботов
                 if message.is_automatic_forward or message.from_user.is_bot:
