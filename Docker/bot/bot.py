@@ -120,7 +120,8 @@ async def chat_with_gpt(message: Message):
 
         selected_model = await load_selected_model()
 
-        response = openai.chat.completions.create(
+        client = openai.OpenAI(api_key=OPENAI_API_KEY)
+        response = client.chat.completions.create(
             model=selected_model,
             messages=[{"role": "user", "content": user_message}]
         )
