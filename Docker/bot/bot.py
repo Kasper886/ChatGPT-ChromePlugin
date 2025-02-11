@@ -206,7 +206,7 @@ async def debug_edited_messages(message: Message):
     logger.info(f"=========================")
 
 # === Debug all updates ===
-@router.update()
+@dp.update()
 async def debug_all_updates(update):
     """Логирует ВСЕ обновления, чтобы увидеть, как Telegram передает измененный текст."""
     logger.info(f"=== ПОЛУЧЕНО ОБНОВЛЕНИЕ ===")
