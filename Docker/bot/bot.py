@@ -48,6 +48,11 @@ async def create_new_chat_file():
         f.write("Chat started\n")
     logger.info(f"Новый файл чата создан: {current_chat_file}")
 
+async def append_to_chat_file(text):
+    if current_chat_file:
+        with open(current_chat_file, "a", encoding="utf-8") as f:
+            f.write(text + "\n")
+
 async def save_selected_model(model_name):
     with open(SELECTED_MODEL_FILE, "w", encoding="utf-8") as f:
         f.write(model_name)
@@ -104,6 +109,29 @@ async def model_selected(callback_query: CallbackQuery):
         await callback_query.message.edit_text(f"✅ Модель изменена на: {model_name}")
     else:
         await callback_query.answer("❌ Ошибка выбора модели.", show_alert=True)
+
+@router.message()
+async def chat_with_gpt(message: Message):
+    try:
+        user_message = message.text.strip()
+        if not user_message:
+            await message.reply("❌ Пустое сообщение.")
+            return
+
+        selected_model = await load_selected_model()
+
+        response = openai.ChatCompletion.create(
+            model=selected_model,
+            messages=[{"role": "user", "content": user_message}]
+        )
+
+        bot_response = response["choices"][0]["message"]["content"]
+        await append_to_chat_file(f"User: {user_message}\nBot: {bot_response}")
+        await message.reply(bot_response)
+
+    except Exception as e:
+        logger.error(f"Ошибка в chat_with_gpt: {str(e)}")
+        await message.reply("❌ Ошибка обработки сообщения.")
 
 # === Запуск бота ===
 dp.include_router(router)
