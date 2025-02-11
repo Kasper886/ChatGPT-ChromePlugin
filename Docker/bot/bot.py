@@ -2,6 +2,7 @@ import asyncio
 import logging
 import openai
 import os
+import re
 from datetime import datetime
 from aiogram import Bot, Dispatcher, Router, types
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
@@ -66,6 +67,21 @@ async def load_selected_model():
                 return model
     return DEFAULT_MODEL
 
+# === Фильтрация сообщений ===
+
+def clean_transcribed_message(text: str) -> str:
+    """Очищает текст от лишних элементов, оставляя только распознанное сообщение."""
+    patterns_to_remove = [
+        r"Голосовое сообщение от .+?:",  # Убираем имя отправителя
+        r"Голосовое сообщение$",  # Просто "Голосовое сообщение"
+    ]
+    
+    for pattern in patterns_to_remove:
+        text = re.sub(pattern, "", text).strip()
+
+    return text if text else None
+
+
 # === Обработчики команд ===
 @router.message(CommandStart())
 async def cmd_start(message: Message):
@@ -110,7 +126,17 @@ async def model_selected(callback_query: CallbackQuery):
     else:
         await callback_query.answer("❌ Ошибка выбора модели.", show_alert=True)
 
-@router.message()
+async def chat_with_gpt_proxy(message: Message, cleaned_text: str):
+    """Обертка для вызова chat_with_gpt с очищенным текстом."""
+    fake_message = Message(
+        message_id=message.message_id,
+        from_user=message.from_user,
+        chat=message.chat,
+        text=cleaned_text
+    )
+    await chat_with_gpt(fake_message)
+
+### @router.message() раскомментируйте, чтобы использовать распознавание речи
 async def chat_with_gpt(message: Message):
     try:
         user_message = message.text.strip()
@@ -133,6 +159,32 @@ async def chat_with_gpt(message: Message):
     except Exception as e:
         logger.error(f"Ошибка в chat_with_gpt: {str(e)}")
         await message.reply("❌ Ошибка обработки сообщения.")
+
+# === Использование этой обработки вместо chat_with_gpt
+@router.message()
+async def handle_messages(message: Message):
+    # 1. Игнорируем голосовые сообщения
+    if message.content_type == ContentType.VOICE:
+        return
+    
+    # 2. Проверяем, что сообщение от SaluteSpeech Bot
+    if message.from_user.username == "smartspeech_sber_bot":
+        text = message.text
+        
+        # Фильтруем сообщения "Получено аудио"
+        if text.lower() == "получено аудио":
+            return
+
+        # Удаляем лишние атрибуты, такие как "Голосовое сообщение" и имя отправителя
+        cleaned_text = clean_transcribed_message(text)
+        
+        # Отправляем в GPT только очищенный текст
+        if cleaned_text:
+            await chat_with_gpt_proxy(message, cleaned_text)
+
+    else:
+        # Если обычный пользователь, передаем сообщение в GPT
+        await chat_with_gpt(message)
 
 # === Запуск бота ===
 dp.include_router(router)
