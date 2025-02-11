@@ -208,30 +208,33 @@ async def debug_edited_messages(message: Message):
 
 @router.message()
 async def handle_messages(message: Message):
-    """Обрабатывает сообщения и копирует их в группу для теста."""
-    if message.content_type == ContentType.VOICE:
-        return  # Игнорируем аудио
+    """Обрабатывает текстовые сообщения, включая ответы от SaluteSpeech Bot."""
     
-    if message.from_user.id == SALUTESPEECH_BOT_ID:
+    # 1. Игнорируем голосовые сообщения
+    if message.content_type == ContentType.VOICE:
+        return  
+    
+    # 2. Проверяем, является ли сообщение ответом (reply)
+    if message.reply_to_message:
+        logger.info(f"✅ Обнаружен reply: {message.reply_to_message.message_id}")
+
+    # 3. Проверяем, пришло ли сообщение от SaluteSpeech Bot
+    if message.from_user.username == "smartspeech_sber_bot":
         text = message.text or message.caption  # Telegram может отправлять текст в caption
-        
-        logger.info(f"[DEBUG] Сообщение от SaluteSpeech Bot: {text}")  # Логируем текст
-        
+
+        logger.info(f"✅ Получено сообщение от SaluteSpeech Bot: {text}")
+
         if text and text.lower() != "получено аудио":
             cleaned_text = clean_transcribed_message(text)
-            if cleaned_text:
-                logger.info(f"[DEBUG] Очищенный текст: {cleaned_text}")  # Лог очищенного текста
-                
-                # Копируем сообщение в группу
-                await message.bot.send_message(
-                    chat_id=message.chat.id,  # Отправляем в тот же чат
-                    text=f"🔄 Пересланное сообщение: {cleaned_text}"
-                )
 
-                # Передаем в GPT (если надо)
+            if cleaned_text:
+                logger.info(f"✅ Очищенный текст: {cleaned_text}")
+
+                # Отправляем обработанный текст в GPT
                 await chat_with_gpt_proxy(message, cleaned_text)
 
     else:
+        # Если сообщение от обычного пользователя, передаем его в GPT
         await chat_with_gpt(message)
 
 # === Запуск бота ===
