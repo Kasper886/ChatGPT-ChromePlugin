@@ -3,6 +3,7 @@ import logging
 import openai
 import os
 import re
+from pydub import AudioSegment
 from datetime import datetime
 from aiogram import Bot, Dispatcher, Router, types
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
@@ -126,6 +127,24 @@ async def model_selected(callback_query: CallbackQuery):
     else:
         await callback_query.answer("❌ Ошибка выбора модели.", show_alert=True)
 
+async def transcribe_audio(audio_path: str) -> str:
+    """Преобразует аудио в текст с помощью OpenAI Whisper API."""
+    try:
+        # Конвертируем в формат MP3 (Whisper API лучше работает с MP3)
+        audio = AudioSegment.from_ogg(audio_path)
+        mp3_path = audio_path.replace(".ogg", ".mp3")
+        audio.export(mp3_path, format="mp3")
+
+        # Отправляем в OpenAI Whisper API
+        with open(mp3_path, "rb") as audio_file:
+            response = openai.Audio.transcribe("whisper-1", audio_file)
+
+        return response["text"]
+
+    except Exception as e:
+        logger.error(f"Ошибка распознавания аудио: {e}")
+        return None
+
 async def chat_with_gpt_proxy(message: Message, cleaned_text: str):
     """Обертка для вызова chat_with_gpt с очищенным текстом."""
     fake_message = Message(
@@ -214,52 +233,44 @@ def clean_transcribed_message(text: str) -> str:
 #    logger.info(f"===========================")
 
 # === Debug all updates 2 ===
-@router.message()
-async def debug_all_messages(message: Message):
-    """Логирует ВСЕ входящие сообщения, включая reply."""
-    logger.info(f"=== ПОЛУЧЕНО СООБЩЕНИЕ ===")
-    logger.info(f"От: {message.from_user.full_name} (ID: {message.from_user.id}, Username: {message.from_user.username})")
-    logger.info(f"Тип контента: {message.content_type}")
-    logger.info(f"Текст: {message.text or message.caption}")
+#@router.message()
+#async def debug_all_messages(message: Message):
+#    """Логирует ВСЕ входящие сообщения, включая reply."""
+#    logger.info(f"=== ПОЛУЧЕНО СООБЩЕНИЕ ===")
+#    logger.info(f"От: {message.from_user.full_name} (ID: {message.from_user.id}, Username: {message.from_user.username})")
+#    logger.info(f"Тип контента: {message.content_type}")
+#    logger.info(f"Текст: {message.text or message.caption}")
     
     # Проверяем, является ли сообщение ответом (reply)
-    if message.reply_to_message:
-        logger.info(f"✅ Это reply на сообщение: {message.reply_to_message.message_id}")
-        logger.info(f"✅ Исходное сообщение (reply_to): {message.reply_to_message.text or message.reply_to_message.caption}")
+#    if message.reply_to_message:
+#        logger.info(f"✅ Это reply на сообщение: {message.reply_to_message.message_id}")
+#        logger.info(f"✅ Исходное сообщение (reply_to): {message.reply_to_message.text or message.reply_to_message.caption}")
 
-    logger.info(f"=========================")
+#    logger.info(f"=========================")
 
 ##############################################
 
 @router.message()
 async def handle_messages(message: Message):
-    """Обрабатывает сообщения, включая ответы от SaluteSpeech Bot (reply)."""
-
-    # 1. Игнорируем голосовые сообщения
+    """Обрабатывает текстовые и голосовые сообщения."""
+    
+    # Если сообщение — голосовое, запускаем распознавание
     if message.content_type == ContentType.VOICE:
-        return  
+        logger.info("🎤 Получено голосовое сообщение, обрабатываем...")
+        
+        voice_file = await bot.get_file(message.voice.file_id)
+        voice_path = f"{voice_file.file_id}.ogg"
+        await bot.download_file(voice_file.file_path, voice_path)
 
-    # 2. Если сообщение является reply, проверяем, кому оно адресовано
-    if message.reply_to_message:
-        logger.info(f"✅ Обнаружен reply на сообщение: {message.reply_to_message.message_id}")
+        # Распознаём текст
+        text = await transcribe_audio(voice_path)
+        if text:
+            logger.info(f"✅ Распознанный текст: {text}")
+            await message.reply(f"🎙 Расшифрованное сообщение: {text}")
 
-        # Проверяем, ответ ли это на голосовое сообщение
-        if message.reply_to_message.content_type == ContentType.VOICE:
-            logger.info(f"✅ Reply является ответом на голосовое сообщение")
+        return  # Останавливаем обработку, так как голосовое сообщение уже обработано
 
-            text = message.text or message.caption
-            if text:
-                logger.info(f"✅ Текст от SaluteSpeech Bot: {text}")
-
-                cleaned_text = clean_transcribed_message(text)
-                if cleaned_text:
-                    logger.info(f"✅ Очищенный текст: {cleaned_text}")
-
-                    # Отправляем обработанный текст в GPT
-                    await chat_with_gpt_proxy(message, cleaned_text)
-                    return
-
-    # 3. Если это обычное сообщение от пользователя, отправляем в GPT
+    # Обычные текстовые сообщения передаем в GPT
     await chat_with_gpt(message)
 
 # === Запуск бота ===
