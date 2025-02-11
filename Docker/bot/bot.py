@@ -169,7 +169,7 @@ async def handle_messages(message: Message):
     
     # 2. Проверяем, что сообщение от SaluteSpeech Bot
     if message.from_user.username == "smartspeech_sber_bot":
-        text = message.text
+        text = message.text or message.caption
         
         # Фильтруем сообщения "Получено аудио"
         if text.lower() == "получено аудио":
@@ -185,6 +185,17 @@ async def handle_messages(message: Message):
     else:
         # Если обычный пользователь, передаем сообщение в GPT
         await chat_with_gpt(message)
+
+@router.edited_message()
+async def handle_edited_messages(message: Message):
+    """Обрабатывает редактированные сообщения (замена аудио на текст от SaluteSpeech Bot)."""
+    if message.from_user.id == "smartspeech_sber_bot":
+        text = message.text or message.caption
+        
+        if text and text.lower() != "получено аудио":
+            cleaned_text = clean_transcribed_message(text)
+            if cleaned_text:
+                await chat_with_gpt_proxy(message, cleaned_text)
 
 # === Запуск бота ===
 dp.include_router(router)
