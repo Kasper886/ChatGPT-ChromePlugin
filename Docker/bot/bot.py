@@ -195,6 +195,14 @@ async def debug_log(message: Message):
     logger.info(f"Тип контента: {message.content_type}")
     logger.info(f"Текст: {message.text or message.caption}")
     logger.info(f"=========================")
+# ===Edited messeges===
+@router.edited_message()
+async def debug_edited_messages(message: Message):
+    """Логируем редактированные сообщения, которые могут быть от SaluteSpeech Bot."""
+    logger.info(f"=== Редактированное сообщение ===")
+    logger.info(f"От: {message.from_user.full_name} (ID: {message.from_user.id}, Username: {message.from_user.username})")
+    logger.info(f"Текст: {message.text or message.caption}")
+    logger.info(f"=========================")
 ##############################################
 
 @router.message()
