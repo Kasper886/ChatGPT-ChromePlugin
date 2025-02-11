@@ -166,7 +166,6 @@ SALUTESPEECH_BOT_ID = 8036450123
 
 def clean_transcribed_message(text: str) -> str:
     """Очищает текст от ненужных элементов."""
-    logger.info(f"Очистка текста: {text}")
     patterns_to_remove = [
         r"Голосовое сообщение от .+?:",  # Убираем имя отправителя
         r"Голосовое сообщение$",
@@ -177,47 +176,33 @@ def clean_transcribed_message(text: str) -> str:
 
     return text if text else None
 
-async def chat_with_gpt_proxy(message: Message, cleaned_text: str):
-    """Обертка для вызова chat_with_gpt с очищенным текстом."""
-    fake_message = Message(
-        message_id=message.message_id,
-        from_user=message.from_user,
-        chat=message.chat,
-        text=cleaned_text
-    )
-    await chat_with_gpt(fake_message)
-
 @router.message()
 async def handle_messages(message: Message):
-    logger.info(f"Входящее сообщение: {message}")
-    """Обрабатывает обычные сообщения и текстовые сообщения от SaluteSpeech Bot."""
+    """Обрабатывает сообщения и копирует их в группу для теста."""
     if message.content_type == ContentType.VOICE:
-        logger.info("Получено аудио")
         return  # Игнорируем аудио
     
     if message.from_user.id == SALUTESPEECH_BOT_ID:
         text = message.text or message.caption  # Telegram может отправлять текст в caption
         
-        logger.info(f"Текст от SaluteSpeech Bot: {text}")
-
-        if text and text.lower() != "получено аудио":
-            cleaned_text = clean_transcribed_message(text)
-            if cleaned_text:
-                await chat_with_gpt_proxy(message, cleaned_text)
-
-    else:
-        await chat_with_gpt(message)
-
-@router.edited_message()
-async def handle_edited_messages(message: Message):
-    """Обрабатывает редактированные сообщения (замена аудио на текст от SaluteSpeech Bot)."""
-    if message.from_user.id == SALUTESPEECH_BOT_ID:
-        text = message.text or message.caption
+        logger.info(f"[DEBUG] Сообщение от SaluteSpeech Bot: {text}")  # Логируем текст
         
         if text and text.lower() != "получено аудио":
             cleaned_text = clean_transcribed_message(text)
             if cleaned_text:
+                logger.info(f"[DEBUG] Очищенный текст: {cleaned_text}")  # Лог очищенного текста
+                
+                # Копируем сообщение в группу
+                await message.bot.send_message(
+                    chat_id=message.chat.id,  # Отправляем в тот же чат
+                    text=f"🔄 Пересланное сообщение: {cleaned_text}"
+                )
+
+                # Передаем в GPT (если надо)
                 await chat_with_gpt_proxy(message, cleaned_text)
+
+    else:
+        await chat_with_gpt(message)
 
 # === Запуск бота ===
 dp.include_router(router)
