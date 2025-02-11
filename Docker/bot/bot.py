@@ -162,7 +162,7 @@ async def chat_with_gpt(message: Message):
 
 
 # === Использование этой обработки вместо chat_with_gpt
-SALUTESPEECH_BOT_ID = 8036450123
+SALUTESPEECH_BOT_ID = 5244379085
 
 def clean_transcribed_message(text: str) -> str:
     """Очищает текст от ненужных элементов."""
@@ -178,14 +178,14 @@ def clean_transcribed_message(text: str) -> str:
 
 # === Обработка всех сообщений ===
 #1
-@router.message()
-async def debug_all_messages(message: Message):
-    """Логирует ВСЕ входящие сообщения, чтобы понять, какие данные приходят."""
-    logger.info(f"=== Получено сообщение ===")
-    logger.info(f"От: {message.from_user.full_name} (ID: {message.from_user.id}, Username: {message.from_user.username})")
-    logger.info(f"Тип контента: {message.content_type}")
-    logger.info(f"Текст: {message.text or message.caption}")
-    logger.info(f"=========================")
+#@router.message()
+#async def debug_all_messages(message: Message):
+#    """Логирует ВСЕ входящие сообщения, чтобы понять, какие данные приходят."""
+#    logger.info(f"=== Получено сообщение ===")
+#    logger.info(f"От: {message.from_user.full_name} (ID: {message.from_user.id}, Username: {message.from_user.username})")
+#    logger.info(f"Тип контента: {message.content_type}")
+#    logger.info(f"Текст: {message.text or message.caption}")
+#    logger.info(f"=========================")
 #2
 #@router.message()
 #async def debug_log(message: Message):
