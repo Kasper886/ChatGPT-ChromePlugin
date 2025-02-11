@@ -3,7 +3,7 @@ import logging
 import openai
 import os
 from datetime import datetime
-from aiogram import Bot, Dispatcher, types
+from aiogram import Bot, Dispatcher, types, Router
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.filters import Command, CommandStart
 from aiogram.enums import ChatType, ContentType
@@ -151,7 +151,8 @@ async def handle_edited_messages(message: Message):
         logger.error(f"Ошибка в обработке редактированных сообщений: {str(e)}")
 
 # === Обработчики команд для выбора модели ===
-@dp.message(Command("setmodel"))
+router = Router()
+@router.message(Command("setmodel"))
 async def set_model_command(message: Message):
     # Создаем список кнопок по 2 в ряд
     buttons = []
