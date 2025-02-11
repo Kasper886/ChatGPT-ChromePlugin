@@ -219,7 +219,7 @@ async def handle_messages(message: Message):
         logger.info(f"✅ Обнаружен reply: {message.reply_to_message.message_id}")
 
     # 3. Проверяем, пришло ли сообщение от SaluteSpeech Bot
-    if message.from_user.username == "smartspeech_sber_bot":
+    if message.from_user.id == SALUTESPEECH_BOT_ID:
         text = message.text or message.caption  # Telegram может отправлять текст в caption
 
         logger.info(f"✅ Получено сообщение от SaluteSpeech Bot: {text}")
