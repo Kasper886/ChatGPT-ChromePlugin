@@ -92,21 +92,27 @@ async def load_selected_model():
     return DEFAULT_MODEL
 
 async def transcribe_audio(audio_path: str) -> str:
-    """Распознает голосовое сообщение."""
+    """Преобразует аудио в текст с помощью OpenAI Whisper API (новый синтаксис)."""
     try:
+        # Конвертируем OGG в MP3
         audio = AudioSegment.from_ogg(audio_path)
         mp3_path = audio_path.replace(".ogg", ".mp3")
         audio.export(mp3_path, format="mp3")
 
+        # Подключаемся к OpenAI API (новый способ)
         client = openai.OpenAI(api_key=OPENAI_API_KEY)
+
+        # Отправляем аудио на распознавание
         with open(mp3_path, "rb") as audio_file:
             response = client.audio.transcriptions.create(
                 model="whisper-1",
                 file=audio_file
             )
+
         return response.text
+
     except Exception as e:
-        logger.error(f"Ошибка при обработке аудио: {e}")
+        logger.error(f"Ошибка распознавания аудио: {e}")
         return None
 
 async def chat_with_gpt(user: types.User, text: str) -> str:
