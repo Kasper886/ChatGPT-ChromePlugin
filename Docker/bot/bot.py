@@ -266,12 +266,15 @@ async def chat_with_gpt_file(message: Message):
 @router.message()
 async def handle_messages(message: Message):
     """Обрабатывает текстовые и голосовые сообщения, записывает в чат-файл и отправляет в GPT."""
-    global current_chat_file
+    username = message.from_user.username or f"user_{message.from_user.id}"
 
-    # Если чат-файл не существует, и не была дана команда /startnewchat, игнорируем сообщение
-    if message.content_type == ContentType.TEXT and not current_chat_file:
-        await message.reply("❌ Пожалуйста, начните новый чат командой /startnewchat.")
+    # Ищем файлы чатов пользователя
+    chat_files = sorted([f for f in os.listdir() if f.startswith(f"{username}-chat")], reverse=True)
+
+    if message.content_type == ContentType.TEXT and not chat_files:
+        await message.answer("❌ У вас нет активного чата. Запустите новый чат командой /startnewchat.")
         return
+
 
     # 🎤 Если пришло голосовое сообщение
     if message.content_type == ContentType.VOICE:
