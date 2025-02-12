@@ -112,7 +112,13 @@ async def chat_with_gpt(user: types.User, text: str) -> str:
 # ==== Обработчики команд ====
 @router.message(CommandStart())
 async def cmd_start(message: Message):
-    await message.answer("👋 Привет! Введите /startnewchat для начала нового диалога.")
+    await message.answer(
+        "👋 Привет! Я бот для общения с ChatGPT.\n\n"
+        "🤖 Доступные команды:\n"
+        "/startnewchat - Начать новый чат\n"
+        "/setmodel - Выбрать модель\n"
+        "/currentmodel - Текущая модель"
+    )
 
 @router.message(Command("startnewchat"))
 async def start_new_chat(message: Message):
@@ -121,12 +127,11 @@ async def start_new_chat(message: Message):
 
 # ==== Обработка сообщений ====
 @router.message()
-async def handle_messages(message: Message):
-    chat_file = await get_chat_file(message.from_user)
-    if not chat_file:
-        await message.answer("❌ У вас нет активного чата. Введите /startnewchat.")
+async def handle_text_messages(message: Message):
+    if message.text and not await get_chat_file(message.from_user):
+        await message.answer("❌ У вас нет активного чата. Введите /startnewchat, чтобы начать новый.")
         return
-
+async def handle_messages(message: Message):
     if message.content_type == ContentType.VOICE:
         voice_file = await bot.get_file(message.voice.file_id)
         voice_path = f"{voice_file.file_id}.ogg"
