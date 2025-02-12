@@ -11,6 +11,7 @@ from aiogram.filters import Command, CommandStart
 from aiogram.enums import ContentType
 from dotenv import load_dotenv
 from pydub import AudioSegment
+from models_list import AVAILABLE_MODELS  # Import available models from an external file
 
 # === Настройка логирования ===
 logging.basicConfig(
@@ -38,6 +39,7 @@ openai.api_key = OPENAI_API_KEY
 # === Глобальные переменные ===
 DEFAULT_MODEL = "gpt-3.5-turbo"
 user_chat_files = {}
+SELECTED_MODEL_FILE = "selected_model.txt"
 
 # ==== Очистка старых файлов ====
 def cleanup_old_files():
@@ -75,6 +77,19 @@ async def append_to_chat_file(user: types.User, text: str):
     if chat_file:
         with open(chat_file, "a", encoding="utf-8") as f:
             f.write(text + "\n")
+
+async def save_selected_model(model_name):
+    with open(SELECTED_MODEL_FILE, "w", encoding="utf-8") as f:
+        f.write(model_name)
+    logger.info(f"✅ Модель сохранена: {model_name}")
+
+async def load_selected_model():
+    if os.path.exists(SELECTED_MODEL_FILE):
+        with open(SELECTED_MODEL_FILE, "r", encoding="utf-8") as f:
+            model = f.read().strip()
+            if model:
+                return model
+    return DEFAULT_MODEL
 
 async def transcribe_audio(audio_path: str) -> str:
     """Распознает голосовое сообщение."""
@@ -119,6 +134,33 @@ async def cmd_start(message: Message):
         "/setmodel - Выбрать модель\n"
         "/currentmodel - Текущая модель"
     )
+
+@router.message(Command("currentmodel"))
+async def current_model(message: Message):
+    selected_model = await load_selected_model()
+    await message.answer(f"🛠 Текущая модель: {selected_model}")
+
+@router.message(Command("setmodel"))
+async def set_model_command(message: Message):
+    buttons = []
+    row = []
+    for i, model in enumerate(AVAILABLE_MODELS):
+        row.append(InlineKeyboardButton(text=model, callback_data=f"setmodel_{model}"))
+        if len(row) == 2 or i == len(AVAILABLE_MODELS) - 1:
+            buttons.append(row)
+            row = []
+
+    keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
+    await message.answer("Select a model:", reply_markup=keyboard)
+
+@router.callback_query()
+async def model_selected(callback_query: CallbackQuery):
+    model_name = callback_query.data.replace("setmodel_", "")
+    if model_name in AVAILABLE_MODELS:
+        await save_selected_model(model_name)
+        await callback_query.message.edit_text(f"✅ Модель изменена на: {model_name}")
+    else:
+        await callback_query.answer("❌ Ошибка выбора модели.", show_alert=True)
 
 @router.message(Command("startnewchat"))
 async def start_new_chat(message: Message):
