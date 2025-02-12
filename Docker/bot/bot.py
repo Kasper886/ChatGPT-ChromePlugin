@@ -240,7 +240,6 @@ async def chat_with_gpt_file(message: Message):
         selected_model = await load_selected_model(username)
 
         # Проверяем, является ли загруженная модель допустимой
-        AVAILABLE_MODELS = {"gpt-3.5-turbo", "gpt-4", "gpt-4o"}
         if selected_model not in AVAILABLE_MODELS:
             selected_model = "gpt-3.5-turbo"  # Если файл пуст или модель некорректна, ставим по умолчанию
 
@@ -249,14 +248,15 @@ async def chat_with_gpt_file(message: Message):
         response = client.chat.completions.create(
             model=selected_model,
             messages=[{"role": "system", "content": "Ты — умный помощник."},
-                      {"role": "user", "content": chat_history}]
+                      {"role": "user", "content": chat_history},
+                      {"role": "user", "content": message.text}]  # Добавляем новое сообщение в диалог
         )
 
         bot_response = response.choices[0].message.content.strip()
 
-        # Записываем ответ GPT в файл чата пользователя
+        # Записываем сообщение пользователя и ответ бота в файл чата
         with open(chat_file, "a", encoding="utf-8") as f:
-            f.write(f"\nBot: {bot_response}")
+            f.write(f"\nUser: {message.text}\nBot: {bot_response}")
 
         return f"🤖 **[Модель: {selected_model}]**\n\n{bot_response}"
 
