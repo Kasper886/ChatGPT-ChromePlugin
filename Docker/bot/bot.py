@@ -153,15 +153,15 @@ async def transcribe_audio(audio_path: str) -> str:
         logger.error(f"Ошибка распознавания аудио: {e}")
         return None
 
-async def chat_with_gpt_proxy(message: Message, cleaned_text: str):
-    """Обертка для вызова chat_with_gpt с очищенным текстом."""
-    fake_message = Message(
-        message_id=message.message_id,
-        from_user=message.from_user,
-        chat=message.chat,
-        text=cleaned_text
-    )
-    await chat_with_gpt(fake_message)
+#async def chat_with_gpt_proxy(message: Message, cleaned_text: str):
+#    """Обертка для вызова chat_with_gpt с очищенным текстом."""
+#    fake_message = Message(
+#        message_id=message.message_id,
+#        from_user=message.from_user,
+#        chat=message.chat,
+#        text=cleaned_text
+#    )
+#    await chat_with_gpt(fake_message)
 
 #@router.message() 
 async def chat_with_gpt(message: Message):
@@ -251,17 +251,17 @@ async def handle_messages(message: Message):
         return  # Завершаем обработку
 
     # 📄 Если пришло текстовое сообщение
-    user_message = message.text.strip()
-    if user_message:
-        await append_to_chat_file(f"User: {user_message}")
+#    user_message = message.text.strip()
+#    if user_message:
+#        await append_to_chat_file(f"User: {user_message}")
 
-        # Используем `chat_with_gpt_file()` для диалога, `chat_with_gpt()` для одиночного ответа
-        if current_chat_file:
-            response = await chat_with_gpt_file()  # Диалог
-        else:
-            response = await chat_with_gpt(message)  # Одиночный ответ
+#        # Используем `chat_with_gpt_file()` для диалога, `chat_with_gpt()` для одиночного ответа
+#        if current_chat_file:
+#            response = await chat_with_gpt_file()  # Диалог
+#        else:
+#            response = await chat_with_gpt(message)  # Одиночный ответ
 
-        await message.reply(response)
+#        await message.reply(response)
 
 # === Запуск бота ===
 dp.include_router(router)
