@@ -3,14 +3,14 @@ import logging
 import openai
 import os
 import re
-import glob
-from datetime import datetime, timedelta
+import subprocess
+from pydub import AudioSegment
+from datetime import datetime
 from aiogram import Bot, Dispatcher, Router, types
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.filters import Command, CommandStart
-from aiogram.enums import ContentType
+from aiogram.enums import ChatType, ContentType
 from dotenv import load_dotenv
-from pydub import AudioSegment
 from models_list import AVAILABLE_MODELS  # Import available models from an external file
 
 # === Настройка логирования ===
@@ -33,49 +33,28 @@ if not OPENAI_API_KEY:
 
 bot = Bot(token=TELEGRAM_BOT_TOKEN)
 dp = Dispatcher()
-router = Router()
+router = Router()  # Добавляем Router
 openai.api_key = OPENAI_API_KEY
 
-# === Глобальные переменные ===
-DEFAULT_MODEL = "gpt-3.5-turbo"
-user_chat_files = {}
+# === Константы и глобальные переменные ===
+SALUTESPEECH_BOT_USERNAME = "smartspeech_sber_bot"
 SELECTED_MODEL_FILE = "selected_model.txt"
-
-# ==== Очистка старых файлов ====
-def cleanup_old_files():
-    """Удаляет файлы чатов и аудиофайлы старше 10 дней."""
-    now = datetime.now()
-    cutoff = now - timedelta(days=10)
-    
-    for file in glob.glob("*-chat-*.txt") + glob.glob("*.ogg"):
-        file_time = datetime.fromtimestamp(os.path.getmtime(file))
-        if file_time < cutoff:
-            os.remove(file)
-            logger.info(f"Удален старый файл: {file}")
-
-cleanup_old_files()
+DEFAULT_MODEL = "gpt-3.5-turbo"
+current_chat_file = None
 
 # ==== Вспомогательные функции ====
-async def create_new_chat_file(user: types.User):
-    """Создает новый файл чата для пользователя."""
-    timestamp = datetime.now().strftime("%d-%m-%y-%H-%M-%S")
-    filename = f"{user.username or user.id}-chat-{timestamp}.txt"
-    user_chat_files[user.id] = filename
-    with open(filename, "w", encoding="utf-8") as f:
+async def create_new_chat_file():
+    global current_chat_file
+    timestamp = datetime.now().strftime("chat-%d-%m-%y-%H-%M-%S.txt")
+    current_chat_file = timestamp
+    with open(current_chat_file, "w", encoding="utf-8") as f:
         f.write("Chat started\n")
-    logger.info(f"Создан файл чата: {filename}")
-    return filename
+    logger.info(f"Новый файл чата создан: {current_chat_file}")
 
-async def get_chat_file(user: types.User):
-    """Возвращает текущий файл чата пользователя или None, если он не существует."""
-    files = glob.glob(f"{user.username or user.id}-chat-*.txt")
-    return files[0] if files else None
-
-async def append_to_chat_file(user: types.User, text: str):
-    """Добавляет текст в файл чата пользователя."""
-    chat_file = await get_chat_file(user)
-    if chat_file:
-        with open(chat_file, "a", encoding="utf-8") as f:
+async def append_to_chat_file(text: str):
+    """Добавляет текст в текущий файл чата."""
+    if current_chat_file:
+        with open(current_chat_file, "a", encoding="utf-8") as f:
             f.write(text + "\n")
 
 async def save_selected_model(model_name):
@@ -91,46 +70,22 @@ async def load_selected_model():
                 return model
     return DEFAULT_MODEL
 
-async def transcribe_audio(audio_path: str) -> str:
-    """Преобразует аудио в текст с помощью OpenAI Whisper API (новый синтаксис)."""
-    try:
-        # Конвертируем OGG в MP3
-        audio = AudioSegment.from_ogg(audio_path)
-        mp3_path = audio_path.replace(".ogg", ".mp3")
-        audio.export(mp3_path, format="mp3")
+# === Фильтрация сообщений ===
 
-        # Подключаемся к OpenAI API (новый способ)
-        client = openai.OpenAI(api_key=OPENAI_API_KEY)
+def clean_transcribed_message(text: str) -> str:
+    """Очищает текст от лишних элементов, оставляя только распознанное сообщение."""
+    patterns_to_remove = [
+        r"Голосовое сообщение от .+?:",  # Убираем имя отправителя
+        r"Голосовое сообщение$",  # Просто "Голосовое сообщение"
+    ]
+    
+    for pattern in patterns_to_remove:
+        text = re.sub(pattern, "", text).strip()
 
-        # Отправляем аудио на распознавание
-        with open(mp3_path, "rb") as audio_file:
-            response = client.audio.transcriptions.create(
-                model="whisper-1",
-                file=audio_file
-            )
+    return text if text else None
 
-        return response.text
 
-    except Exception as e:
-        logger.error(f"Ошибка распознавания аудио: {e}")
-        return None
-
-async def chat_with_gpt(user: types.User, text: str) -> str:
-    """Отправляет сообщение в ChatGPT и получает ответ."""
-    try:
-        client = openai.OpenAI(api_key=OPENAI_API_KEY)
-        response = client.chat.completions.create(
-            model=DEFAULT_MODEL,
-            messages=[{"role": "user", "content": text}]
-        )
-        bot_response = response.choices[0].message.content
-        await append_to_chat_file(user, f"Bot: {bot_response}")
-        return bot_response
-    except Exception as e:
-        logger.error(f"Ошибка в chat_with_gpt: {e}")
-        return "Ошибка обработки сообщения."
-
-# ==== Обработчики команд ====
+# === Обработчики команд ===
 @router.message(CommandStart())
 async def cmd_start(message: Message):
     await message.answer(
@@ -140,6 +95,12 @@ async def cmd_start(message: Message):
         "/setmodel - Выбрать модель\n"
         "/currentmodel - Текущая модель"
     )
+
+@router.message(Command("startnewchat"))
+async def start_new_chat(message: Message):
+    await create_new_chat_file()
+    timestamp = datetime.now().strftime("%d.%m.%Y %H:%M:%S")
+    await message.answer(f"🆕 Новый чат начат: {timestamp}")
 
 @router.message(Command("currentmodel"))
 async def current_model(message: Message):
@@ -168,12 +129,41 @@ async def model_selected(callback_query: CallbackQuery):
     else:
         await callback_query.answer("❌ Ошибка выбора модели.", show_alert=True)
 
-@router.message(Command("startnewchat"))
-async def start_new_chat(message: Message):
-    filename = await create_new_chat_file(message.from_user)
-    await message.answer(f"🆕 Новый чат начат. Файл: {filename}")
+async def transcribe_audio(audio_path: str) -> str:
+    """Преобразует аудио в текст с помощью OpenAI Whisper API (новый синтаксис)."""
+    try:
+        # Конвертируем OGG в MP3
+        audio = AudioSegment.from_ogg(audio_path)
+        mp3_path = audio_path.replace(".ogg", ".mp3")
+        audio.export(mp3_path, format="mp3")
 
-# ==== Обработка сообщений ====
+        # Подключаемся к OpenAI API (новый способ)
+        client = openai.OpenAI(api_key=OPENAI_API_KEY)
+
+        # Отправляем аудио на распознавание
+        with open(mp3_path, "rb") as audio_file:
+            response = client.audio.transcriptions.create(
+                model="whisper-1",
+                file=audio_file
+            )
+
+        return response.text
+
+    except Exception as e:
+        logger.error(f"Ошибка распознавания аудио: {e}")
+        return None
+
+async def chat_with_gpt_proxy(message: Message, cleaned_text: str):
+    """Обертка для вызова chat_with_gpt с очищенным текстом."""
+    fake_message = Message(
+        message_id=message.message_id,
+        from_user=message.from_user,
+        chat=message.chat,
+        text=cleaned_text
+    )
+    await chat_with_gpt(fake_message)
+
+#@router.message() 
 async def chat_with_gpt(message: Message):
     try:
         user_message = message.text.strip()
@@ -201,10 +191,10 @@ async def chat_with_gpt_file():
     """Отправляет весь файл чата в GPT и получает ответ."""
     try:
         # Читаем содержимое файла чата
-        if not user_chat_files:
+        if not current_chat_file:
             return "❌ Ошибка: Файл чата не найден."
 
-        with open(user_chat_files, "r", encoding="utf-8") as f:
+        with open(current_chat_file, "r", encoding="utf-8") as f:
             chat_history = f.read()
 
         # Отправляем в GPT
@@ -225,6 +215,53 @@ async def chat_with_gpt_file():
     except Exception as e:
         logger.error(f"Ошибка в chat_with_gpt_file: {e}")
         return "❌ Ошибка обработки сообщения."
+
+
+@router.message()
+async def handle_messages(message: Message):
+    """Обрабатывает текстовые и голосовые сообщения, записывает в чат-файл и отправляет в GPT."""
+
+    # 🎤 Если пришло голосовое сообщение
+    if message.content_type == ContentType.VOICE:
+        logger.info("🎤 Получено голосовое сообщение, обрабатываем...")
+
+        # Скачиваем голосовое сообщение
+        voice_file = await bot.get_file(message.voice.file_id)
+        voice_path = f"{voice_file.file_id}.ogg"
+        await bot.download_file(voice_file.file_path, voice_path)
+
+        # Распознаём текст
+        text = await transcribe_audio(voice_path)
+        if text:
+            logger.info(f"✅ Расшифрованный текст: {text}")
+
+            # Убираем "Расшифрованное сообщение:"
+            cleaned_text = text.replace("Расшифрованное сообщение:", "").strip()
+
+            # 📢 Отправляем в чат расшифрованное сообщение
+            await message.reply(f"🎙 Расшифрованный текст:\n{cleaned_text}")
+
+            # Записываем в файл чата
+            await append_to_chat_file(f"User: {cleaned_text}")
+
+            # Отправляем содержимое файла в GPT и получаем ответ
+            response = await chat_with_gpt_file()
+            await message.reply(response)
+
+        return  # Завершаем обработку
+
+    # 📄 Если пришло текстовое сообщение
+    user_message = message.text.strip()
+    if user_message:
+        await append_to_chat_file(f"User: {user_message}")
+
+        # Используем `chat_with_gpt_file()` для диалога, `chat_with_gpt()` для одиночного ответа
+        if current_chat_file:
+            response = await chat_with_gpt_file()  # Диалог
+        else:
+            response = await chat_with_gpt(message)  # Одиночный ответ
+
+        await message.reply(response)
 
 # === Запуск бота ===
 dp.include_router(router)
