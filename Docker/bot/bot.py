@@ -43,9 +43,9 @@ DEFAULT_MODEL = "gpt-3.5-turbo"
 current_chat_file = None
 
 # ==== Вспомогательные функции ====
-async def create_new_chat_file():
+async def create_new_chat_file(username: str):
     global current_chat_file
-    timestamp = datetime.now().strftime("chat-%d-%m-%y-%H-%M-%S.txt")
+    timestamp = datetime.now().strftime(f"{username}-%d-%m-%y-%H-%M-%S.txt")
     current_chat_file = timestamp
     with open(current_chat_file, "w", encoding="utf-8") as f:
         f.write("Chat started\n")
@@ -98,7 +98,7 @@ async def cmd_start(message: Message):
 
 @router.message(Command("startnewchat"))
 async def start_new_chat(message: Message):
-    await create_new_chat_file()
+    await create_new_chat_file(message.from_user.username)
     timestamp = datetime.now().strftime("%d.%m.%Y %H:%M:%S")
     await message.answer(f"🆕 Новый чат начат: {timestamp}")
 
@@ -152,16 +152,6 @@ async def transcribe_audio(audio_path: str) -> str:
     except Exception as e:
         logger.error(f"Ошибка распознавания аудио: {e}")
         return None
-
-#async def chat_with_gpt_proxy(message: Message, cleaned_text: str):
-#    """Обертка для вызова chat_with_gpt с очищенным текстом."""
-#    fake_message = Message(
-#        message_id=message.message_id,
-#        from_user=message.from_user,
-#        chat=message.chat,
-#        text=cleaned_text
-#    )
-#    await chat_with_gpt(fake_message)
 
 #@router.message() 
 async def chat_with_gpt(message: Message):
@@ -220,6 +210,12 @@ async def chat_with_gpt_file():
 @router.message()
 async def handle_messages(message: Message):
     """Обрабатывает текстовые и голосовые сообщения, записывает в чат-файл и отправляет в GPT."""
+    global current_chat_file
+
+    # Если чат-файл не существует, и не была дана команда /startnewchat, игнорируем сообщение
+    if not current_chat_file and not message.get_command():
+        await message.reply("❌ Пожалуйста, начните новый чат командой /startnewchat.")
+        return
 
     # 🎤 Если пришло голосовое сообщение
     if message.content_type == ContentType.VOICE:
@@ -248,7 +244,7 @@ async def handle_messages(message: Message):
             response = await chat_with_gpt_file()
             await message.reply(response)
 
-        return  # Завершаем обработку
+        return  # Завершаем обработку голосового сообщения
 
     # 📄 Если пришло текстовое сообщение
     user_message = message.text.strip()
