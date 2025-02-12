@@ -213,10 +213,20 @@ async def chat_with_gpt_file():
         with open(current_chat_file, "r", encoding="utf-8") as f:
             chat_history = f.read()
 
+        # Определяем пользователя по имени файла чата
+        username = "default_user"
+        if current_chat_file:
+            username = current_chat_file.split("-")[0]  # Извлекаем имя пользователя
+
+        # Загружаем выбранную модель или используем модель по умолчанию
+        selected_model = await load_selected_model(username)
+        if not selected_model:
+            selected_model = "gpt-3.5-turbo"  # Модель по умолчанию
+
         # Отправляем в GPT
         client = openai.OpenAI(api_key=OPENAI_API_KEY)
         response = client.chat.completions.create(
-            model="gpt-4o",  # Можно сменить на нужную модель
+            model=selected_model,  # Используем модель из файла
             messages=[{"role": "system", "content": "Ты — умный помощник."},
                       {"role": "user", "content": chat_history}]
         )
@@ -226,11 +236,10 @@ async def chat_with_gpt_file():
         # Записываем ответ GPT в файл чата
         await append_to_chat_file(f"Bot: {bot_response}")
 
-        return bot_response
+        return f"🤖 [Модель: {selected_model}]\n\n{bot_response}"
 
     except Exception as e:
-        logger.error(f"Ошибка в chat_with_gpt_file: {e}")
-        return "❌ Ошибка обработки сообщения."
+        return f"❌ Ошибка при обращении к GPT: {e}"
 
 
 @router.message()
