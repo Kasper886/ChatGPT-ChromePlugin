@@ -15,9 +15,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the bot's source code
 COPY . .
 
-# Copy selected model file
-RUN touch /bot/selected_model.txt && chmod 666 /bot/selected_model.txt
-
 # Открываем порт (если бот использует Flask)
 EXPOSE 5000
 
