@@ -291,28 +291,55 @@ async def handle_messages(message: Message):
     if message.content_type == ContentType.VOICE:
         logger.info("🎤 Получено голосовое сообщение, обрабатываем...")
 
-        # Скачиваем голосовое сообщение
-        voice_file = await bot.get_file(message.voice.file_id)
-        voice_path = f"{voice_file.file_id}.ogg"
-        await bot.download_file(voice_file.file_path, voice_path)
+        try:
+            # Скачиваем голосовое сообщение
+            voice_file = await bot.get_file(message.voice.file_id)
+            voice_path = f"{voice_file.file_id}.ogg"
+            await bot.download_file(voice_file.file_path, voice_path)
 
-        # Распознаём текст
-        text = await transcribe_audio(voice_path)
-        if text:
-            logger.info(f"✅ Расшифрованный текст: {text}")
+            # Распознаём текст
+            text = await transcribe_audio(voice_path)
 
-            # Убираем "Расшифрованное сообщение:"
-            cleaned_text = text.replace("Расшифрованное сообщение:", "").strip()
+            if text:
+                logger.info(f"✅ Расшифрованный текст: {text}")
 
-            # 📢 Отправляем в чат расшифрованное сообщение
-            await message.reply(f"🎙 Расшифрованный текст:\n{cleaned_text}")
+                # Убираем "Расшифрованное сообщение:"
+                cleaned_text = text.replace("Расшифрованное сообщение:", "").strip()
 
-            # Записываем в файл чата пользователя
-            await append_to_chat_file(username, f"User: {cleaned_text}")
+                # 📢 Отправляем в чат расшифрованное сообщение
+                await message.reply(f"🎙 Расшифрованный текст:\n{cleaned_text}")
 
-            # Отправляем содержимое файла в GPT и получаем ответ
-            response = await chat_with_gpt_file(message)
-            await message.reply(response)
+                # Записываем в файл чата пользователя
+                await append_to_chat_file(username, f"User: {cleaned_text}")
+
+                # 🔍 Загружаем выбранную модель
+                selected_model = await load_selected_model(username)
+
+                # Проверяем корректность модели
+                if selected_model not in AVAILABLE_MODELS:
+                    logger.warning(f"⚠️ Некорректная модель '{selected_model}', используем gpt-3.5-turbo")
+                    selected_model = "gpt-3.5-turbo"
+
+                # Отправляем в GPT
+                client = openai.OpenAI(api_key=OPENAI_API_KEY)
+                response = client.chat.completions.create(
+                    model=selected_model,
+                    messages=[
+                        {"role": "system", "content": "Ты — умный помощник."},
+                        {"role": "user", "content": cleaned_text}
+                    ]
+                )
+
+                bot_response = response.choices[0].message.content.strip()
+
+                # Записываем сообщение пользователя и ответ бота в файл чата
+                await append_to_chat_file(username, f"Bot: {bot_response}")
+
+                await message.reply(f"🤖 **[Модель: {selected_model}]**\n\n{bot_response}")
+
+        except Exception as e:
+            logger.error(f"❌ Ошибка при обработке голосового сообщения: {e}")
+            await message.reply("❌ Ошибка обработки голосового сообщения.")
 
         return  # Завершаем обработку голосового сообщения
 
@@ -321,7 +348,6 @@ async def handle_messages(message: Message):
     if user_message:
         await append_to_chat_file(username, f"User: {user_message}")
 
-        # Используем `chat_with_gpt_file()` для диалога, `chat_with_gpt()` для одиночного ответа
         if chat_file:
             response = await chat_with_gpt_file(message)  # Диалог
         else:
