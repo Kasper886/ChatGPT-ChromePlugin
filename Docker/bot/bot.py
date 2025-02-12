@@ -38,7 +38,7 @@ openai.api_key = OPENAI_API_KEY
 
 # === Константы и глобальные переменные ===
 SALUTESPEECH_BOT_USERNAME = "smartspeech_sber_bot"
-SELECTED_MODEL_FILE = "selected_model.txt"
+SELECTED_MODEL_FILE = "{username}-selected_model.txt"
 DEFAULT_MODEL = "gpt-3.5-turbo"
 current_chat_file = None
 
