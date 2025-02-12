@@ -39,28 +39,32 @@ openai.api_key = OPENAI_API_KEY
 # === Константы и глобальные переменные ===
 #SELECTED_MODEL_FILE = "selected_model.txt"
 DEFAULT_MODEL = "gpt-3.5-turbo"
-current_chat_file = None
+#current_chat_file = None
 
 # ==== Вспомогательные функции ====
 async def get_selected_model_file(username: str) -> str:
     """Формирует уникальное имя файла для выбранной модели"""
     return f"{username}-selected_model.txt"
 
-async def create_new_chat_file(username: str):
-    global current_chat_file
+async def create_new_chat_file(username: str) -> str:
+    """Создает новый файл чата для пользователя и возвращает его имя."""
     selected_model_file = await get_selected_model_file(username)
-    timestamp = datetime.now().strftime(f"{username}-%d-%m-%y-%H-%M-%S.txt")
-    current_chat_file = timestamp
-    # Создаем файл модели, если он еще не существует
-    with open(selected_model_file, "w", encoding="utf-8") as f:
-        f.write("Selected model file initialized\n")
+
+    # Генерируем уникальное имя файла чата
+    timestamp = datetime.now().strftime("%d-%m-%y-%H-%M-%S")
+    chat_file = f"{username}-chat-{timestamp}.txt"
+
+    # Если файла модели нет — создаем его
+    if not os.path.exists(selected_model_file):
+        with open(selected_model_file, "w", encoding="utf-8") as f:
+            f.write("gpt-3.5-turbo\n")  # По умолчанию используем gpt-3.5-turbo
 
     # Создаем новый файл чата
-    with open(current_chat_file, "w", encoding="utf-8") as f:
+    with open(chat_file, "w", encoding="utf-8") as f:
         f.write("Chat started\n")
 
-    logger.info(f"Новый файл чата создан: {current_chat_file}")
-    logger.info(f"Файл модели создан: {selected_model_file}")
+    logger.info(f"✅ Новый файл чата создан: {chat_file}")
+    return chat_file
 
 async def append_to_chat_file(text: str):
     """Добавляет текст в текущий файл чата."""
@@ -121,9 +125,11 @@ async def cmd_start(message: Message):
 
 @router.message(Command("startnewchat"))
 async def start_new_chat(message: Message):
-    await create_new_chat_file(message.from_user.username)
-    timestamp = datetime.now().strftime("%d.%m.%Y %H:%M:%S")
-    await message.answer(f"🆕 Новый чат начат: {timestamp}")
+    username = message.from_user.username or f"user_{message.from_user.id}"
+    chat_file = await create_new_chat_file(username)  # Создаём новый чат-файл
+
+    await message.answer(f"✅ Новый чат создан!\nФайл: `{chat_file}`")
+
 
 @router.message(Command("currentmodel"))
 async def current_model(message: Message):
@@ -210,39 +216,47 @@ async def chat_with_gpt(message: Message):
         logger.error(f"Ошибка в chat_with_gpt: {str(e)}")
         await message.reply("❌ Ошибка обработки сообщения.")
 
-async def chat_with_gpt_file():
-    """Отправляет весь файл чата в GPT и получает ответ."""
+async def chat_with_gpt_file(message: Message):
+    """Отправляет файл чата пользователя в GPT и получает ответ."""
     try:
+        # Определяем пользователя
+        username = message.from_user.username or f"user_{message.from_user.id}"
+
+        # Получаем все файлы чатов пользователя
+        chat_files = sorted([f for f in os.listdir() if f.startswith(f"{username}-chat")], reverse=True)
+
+        # Если у пользователя нет файлов чатов — он не может отправить сообщение
+        if not chat_files:
+            return "❌ У вас нет активного чата. Запустите новый чат командой /startnewchat."
+
+        # Берем самый новый файл чата
+        chat_file = chat_files[0]
+
         # Читаем содержимое файла чата
-        if not current_chat_file:
-            return "❌ У вас нет нового чата. Запустите чат командой /startnewchat."
-
-        with open(current_chat_file, "r", encoding="utf-8") as f:
+        with open(chat_file, "r", encoding="utf-8") as f:
             chat_history = f.read()
-
-        # Определяем пользователя по имени файла чата
-        username = current_chat_file.split("-")[0] if current_chat_file else "default_user"
 
         # Загружаем выбранную модель или используем модель по умолчанию
         selected_model = await load_selected_model(username)
 
         # Проверяем, является ли загруженная модель допустимой
-        
+        AVAILABLE_MODELS = {"gpt-3.5-turbo", "gpt-4", "gpt-4o"}
         if selected_model not in AVAILABLE_MODELS:
             selected_model = "gpt-3.5-turbo"  # Если файл пуст или модель некорректна, ставим по умолчанию
 
         # Отправляем в GPT
         client = openai.OpenAI(api_key=OPENAI_API_KEY)
         response = client.chat.completions.create(
-            model=selected_model,  # Используем загруженную или дефолтную модель
+            model=selected_model,
             messages=[{"role": "system", "content": "Ты — умный помощник."},
                       {"role": "user", "content": chat_history}]
         )
 
         bot_response = response.choices[0].message.content.strip()
 
-        # Записываем ответ GPT в файл чата
-        await append_to_chat_file(f"Bot: {bot_response}")
+        # Записываем ответ GPT в файл чата пользователя
+        with open(chat_file, "a", encoding="utf-8") as f:
+            f.write(f"\nBot: {bot_response}")
 
         return f"🤖 **[Модель: {selected_model}]**\n\n{bot_response}"
 
