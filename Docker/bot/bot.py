@@ -120,8 +120,14 @@ async def start_new_chat(message: Message):
 
 @router.message(Command("currentmodel"))
 async def current_model(message: Message):
-    selected_model = await load_selected_model()
-    await message.answer(f"🛠 Текущая модель: {selected_model}")
+    username = message.from_user.username or f"user_{message.from_user.id}"  # Получаем уникальное имя пользователя
+    selected_model = await load_selected_model(username)  # Загружаем модель пользователя
+    
+    if not selected_model:  # Если файл отсутствует или пустой, возвращаем модель по умолчанию
+        selected_model = "gpt-3.5-turbo"
+
+    await message.answer(f"🛠 Текущая модель: `{selected_model}`")
+
 
 @router.message(Command("setmodel"))
 async def set_model_command(message: Message):
