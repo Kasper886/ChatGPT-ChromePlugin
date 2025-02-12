@@ -68,24 +68,31 @@ async def append_to_chat_file(text: str):
         with open(current_chat_file, "a", encoding="utf-8") as f:
             f.write(text + "\n")
 
-async def save_selected_model(username: str, model_name: str):
-    selected_model_file = await get_selected_model_file(username)  # Получаем уникальный файл для пользователя
+async def save_selected_model(username: str, model_name: str = DEFAULT_MODEL):
+    """Сохраняет выбранную модель в файл пользователя, если модель не указана - записывает модель по умолчанию."""
+    selected_model_file = await get_selected_model_file(username)
     
     with open(selected_model_file, "w", encoding="utf-8") as f:
-        f.write(model_name)
-    
+        f.write(model_name)  # Теперь записываем реальную модель, а не просто текст
     logger.info(f"✅ Модель '{model_name}' сохранена в файл: {selected_model_file}")
 
 async def load_selected_model(username: str):
-    selected_model_file = await get_selected_model_file(username)  # Получаем путь к файлу пользователя
+    """Загружает выбранную модель, если файла нет — создает его с моделью по умолчанию."""
+    selected_model_file = await get_selected_model_file(username)
 
-    if os.path.exists(selected_model_file):
-        with open(selected_model_file, "r", encoding="utf-8") as f:
-            model = f.read().strip()
-            if model:
-                return model
+    if not os.path.exists(selected_model_file):
+        await save_selected_model(username, DEFAULT_MODEL)  # Если файла нет, создаем его с моделью по умолчанию
+        return DEFAULT_MODEL
 
-    return DEFAULT_MODEL  # Если файла нет или он пустой, возвращаем модель по умолчанию
+    with open(selected_model_file, "r", encoding="utf-8") as f:
+        model = f.read().strip()
+
+    # Проверяем, поддерживается ли загруженная модель, иначе возвращаем модель по умолчанию
+    
+    if model not in AVAILABLE_MODELS:
+        return DEFAULT_MODEL
+
+    return model
 
 # === Фильтрация сообщений ===
 def clean_transcribed_message(text: str) -> str:
@@ -214,33 +221,33 @@ async def chat_with_gpt_file():
             chat_history = f.read()
 
         # Определяем пользователя по имени файла чата
-        username = "default_user"
-        if current_chat_file:
-            username = current_chat_file.split("-")[0]  # Извлекаем имя пользователя
+        username = current_chat_file.split("-")[0] if current_chat_file else "default_user"
 
         # Загружаем выбранную модель или используем модель по умолчанию
         selected_model = await load_selected_model(username)
-        if not selected_model:
-            selected_model = "gpt-3.5-turbo"  # Модель по умолчанию
+
+        # Проверяем, является ли загруженная модель допустимой
+        
+        if selected_model not in AVAILABLE_MODELS:
+            selected_model = "gpt-3.5-turbo"  # Если файл пуст или модель некорректна, ставим по умолчанию
 
         # Отправляем в GPT
         client = openai.OpenAI(api_key=OPENAI_API_KEY)
         response = client.chat.completions.create(
-            model=selected_model,  # Используем модель из файла
+            model=selected_model,  # Используем загруженную или дефолтную модель
             messages=[{"role": "system", "content": "Ты — умный помощник."},
                       {"role": "user", "content": chat_history}]
         )
 
-        bot_response = response.choices[0].message.content
+        bot_response = response.choices[0].message.content.strip()
 
         # Записываем ответ GPT в файл чата
         await append_to_chat_file(f"Bot: {bot_response}")
 
-        return f"🤖 [Модель: {selected_model}]\n\n{bot_response}"
+        return f"🤖 **[Модель: {selected_model}]**\n\n{bot_response}"
 
     except Exception as e:
         return f"❌ Ошибка при обращении к GPT: {e}"
-
 
 @router.message()
 async def handle_messages(message: Message):
