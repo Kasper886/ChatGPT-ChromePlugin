@@ -136,7 +136,10 @@ async def start_new_chat(message: Message):
     username = message.from_user.username or f"user_{message.from_user.id}"
     chat_file = await create_new_chat_file(username)  # Создаём новый чат-файл
 
-    await message.answer(f"✅ Новый чат создан!\nФайл: `{chat_file}`")
+    # Получаем текущую дату и время в формате ДД.ММ.ГГГГ ЧЧ:ММ:СС
+    current_time = datetime.now().strftime("%d.%m.%Y %H:%M:%S")
+
+    await message.answer(f"✅ Новый чат создан!\n🕒 {current_time}")
 
 
 @router.message(Command("currentmodel"))
