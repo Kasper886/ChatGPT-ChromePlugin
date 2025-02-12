@@ -192,7 +192,7 @@ async def chat_with_gpt_file():
     try:
         # Читаем содержимое файла чата
         if not current_chat_file:
-            return "❌ Ошибка: Файл чата не найден."
+            return "❌ У вас нет нового чата. Запустите чат командой /startnewchat."
 
         with open(current_chat_file, "r", encoding="utf-8") as f:
             chat_history = f.read()
@@ -252,7 +252,11 @@ async def handle_messages(message: Message):
 
     # 📄 Если пришло текстовое сообщение
     user_message = message.text.strip()
-    if user_message:
+    # Читаем содержимое файла чата
+    if not current_chat_file:
+        return "❌ У вас нет нового чата. Запустите чат командой /startnewchat."
+
+    elif user_message:
         await append_to_chat_file(f"User: {user_message}")
 
         # Используем `chat_with_gpt_file()` для диалога, `chat_with_gpt()` для одиночного ответа
