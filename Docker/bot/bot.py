@@ -37,19 +37,30 @@ router = Router()  # Добавляем Router
 openai.api_key = OPENAI_API_KEY
 
 # === Константы и глобальные переменные ===
-SALUTESPEECH_BOT_USERNAME = "smartspeech_sber_bot"
-SELECTED_MODEL_FILE = "{username}-selected_model.txt"
+#SELECTED_MODEL_FILE = "selected_model.txt"
 DEFAULT_MODEL = "gpt-3.5-turbo"
 current_chat_file = None
 
 # ==== Вспомогательные функции ====
+async def get_selected_model_file(username: str) -> str:
+    """Формирует уникальное имя файла для выбранной модели"""
+    return f"{username}-selected_model.txt"
+
 async def create_new_chat_file(username: str):
     global current_chat_file
+    selected_model_file = await get_selected_model_file(username)
     timestamp = datetime.now().strftime(f"{username}-%d-%m-%y-%H-%M-%S.txt")
     current_chat_file = timestamp
+    # Создаем файл модели, если он еще не существует
+    with open(selected_model_file, "w", encoding="utf-8") as f:
+        f.write("Selected model file initialized\n")
+
+    # Создаем новый файл чата
     with open(current_chat_file, "w", encoding="utf-8") as f:
         f.write("Chat started\n")
+
     logger.info(f"Новый файл чата создан: {current_chat_file}")
+    logger.info(f"Файл модели создан: {selected_model_file}")
 
 async def append_to_chat_file(text: str):
     """Добавляет текст в текущий файл чата."""
@@ -57,18 +68,24 @@ async def append_to_chat_file(text: str):
         with open(current_chat_file, "a", encoding="utf-8") as f:
             f.write(text + "\n")
 
-async def save_selected_model(model_name):
-    with open(SELECTED_MODEL_FILE, "w", encoding="utf-8") as f:
+async def save_selected_model(username: str, model_name: str):
+    selected_model_file = await get_selected_model_file(username)  # Получаем уникальный файл для пользователя
+    
+    with open(selected_model_file, "w", encoding="utf-8") as f:
         f.write(model_name)
-    logger.info(f"✅ Модель сохранена: {model_name}")
+    
+    logger.info(f"✅ Модель '{model_name}' сохранена в файл: {selected_model_file}")
 
-async def load_selected_model():
-    if os.path.exists(SELECTED_MODEL_FILE):
-        with open(SELECTED_MODEL_FILE, "r", encoding="utf-8") as f:
+async def load_selected_model(username: str):
+    selected_model_file = await get_selected_model_file(username)  # Получаем путь к файлу пользователя
+
+    if os.path.exists(selected_model_file):
+        with open(selected_model_file, "r", encoding="utf-8") as f:
             model = f.read().strip()
             if model:
                 return model
-    return DEFAULT_MODEL
+
+    return DEFAULT_MODEL  # Если файла нет или он пустой, возвращаем модель по умолчанию
 
 # === Фильтрация сообщений ===
 def clean_transcribed_message(text: str) -> str:
@@ -117,7 +134,10 @@ async def set_model_command(message: Message):
             row = []
 
     keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
-    await message.answer("Select a model:", reply_markup=keyboard)
+    username = message.from_user.username or f"user_{message.from_user.id}"  # Если username нет, используем user_ID
+    selected_model_file = await get_selected_model_file(username)
+    await message.answer(f"Select a model:\n(Saving to: `{selected_model_file}`)", reply_markup=keyboard)
+
 
 @router.callback_query()
 async def model_selected(callback_query: CallbackQuery):
