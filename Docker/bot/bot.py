@@ -139,14 +139,15 @@ async def set_model_command(message: Message):
     await message.answer(f"Select a model:\n(Saving to: `{selected_model_file}`)", reply_markup=keyboard)
 
 
-@router.callback_query()
+@router.callback_query(lambda c: c.data.startswith("setmodel_"))
 async def model_selected(callback_query: CallbackQuery):
-    model_name = callback_query.data.replace("setmodel_", "")
-    if model_name in AVAILABLE_MODELS:
-        await save_selected_model(model_name)
-        await callback_query.message.edit_text(f"✅ Модель изменена на: {model_name}")
-    else:
-        await callback_query.answer("❌ Ошибка выбора модели.", show_alert=True)
+    model_name = callback_query.data.split("_")[1]  # Извлекаем название модели
+    username = callback_query.from_user.username or f"user_{callback_query.from_user.id}"  # Гарантируем уникальное имя
+
+    await save_selected_model(username, model_name)  # Исправленный вызов
+
+    await callback_query.answer(f"✅ Модель '{model_name}' выбрана!")
+    await callback_query.message.edit_text(f"🔹 Ваша текущая модель: `{model_name}`")
 
 async def transcribe_audio(audio_path: str) -> str:
     """Преобразует аудио в текст с помощью OpenAI Whisper API (новый синтаксис)."""
