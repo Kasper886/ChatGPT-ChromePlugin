@@ -174,26 +174,57 @@ async def start_new_chat(message: Message):
     await message.answer(f"🆕 Новый чат начат. Файл: {filename}")
 
 # ==== Обработка сообщений ====
-@router.message()
-async def handle_text_messages(message: Message):
-    if message.text and not await get_chat_file(message.from_user):
-        await message.answer("❌ У вас нет активного чата. Введите /startnewchat, чтобы начать новый.")
-        return
-async def handle_messages(message: Message):
-    if message.content_type == ContentType.VOICE:
-        voice_file = await bot.get_file(message.voice.file_id)
-        voice_path = f"{voice_file.file_id}.ogg"
-        await bot.download_file(voice_file.file_path, voice_path)
-        text = await transcribe_audio(voice_path)
-        if text:
-            response = await chat_with_gpt(message.from_user, text)
-            await message.reply(response)
-        return
+async def chat_with_gpt(message: Message):
+    try:
+        user_message = message.text.strip()
+        if not user_message:
+            await message.reply("❌ Пустое сообщение.")
+            return
 
-    user_message = message.text.strip()
-    if user_message:
-        response = await chat_with_gpt(message.from_user, user_message)
-        await message.reply(response)
+        selected_model = await load_selected_model()
+
+        client = openai.OpenAI(api_key=OPENAI_API_KEY)
+        response = client.chat.completions.create(
+            model=selected_model,
+            messages=[{"role": "user", "content": user_message}]
+        )
+
+        bot_response = response.choices[0].message.content
+        await append_to_chat_file(f"User: {user_message}\nBot: {bot_response}")
+        await message.reply(bot_response)
+
+    except Exception as e:
+        logger.error(f"Ошибка в chat_with_gpt: {str(e)}")
+        await message.reply("❌ Ошибка обработки сообщения.")
+
+async def chat_with_gpt_file():
+    """Отправляет весь файл чата в GPT и получает ответ."""
+    try:
+        # Читаем содержимое файла чата
+        if not user_chat_files:
+            return "❌ Ошибка: Файл чата не найден."
+
+        with open(user_chat_files, "r", encoding="utf-8") as f:
+            chat_history = f.read()
+
+        # Отправляем в GPT
+        client = openai.OpenAI(api_key=OPENAI_API_KEY)
+        response = client.chat.completions.create(
+            model="gpt-4o",  # Можно сменить на нужную модель
+            messages=[{"role": "system", "content": "Ты — умный помощник."},
+                      {"role": "user", "content": chat_history}]
+        )
+
+        bot_response = response.choices[0].message.content
+
+        # Записываем ответ GPT в файл чата
+        await append_to_chat_file(f"Bot: {bot_response}")
+
+        return bot_response
+
+    except Exception as e:
+        logger.error(f"Ошибка в chat_with_gpt_file: {e}")
+        return "❌ Ошибка обработки сообщения."
 
 # === Запуск бота ===
 dp.include_router(router)
