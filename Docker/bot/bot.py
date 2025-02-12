@@ -51,11 +51,19 @@ async def create_new_chat_file(username: str):
         f.write("Chat started\n")
     logger.info(f"Новый файл чата создан: {current_chat_file}")
 
-async def append_to_chat_file(text: str):
-    """Добавляет текст в текущий файл чата."""
+async def append_to_chat_file(message: Message, text: str):
+    """Adds text to the current chat file. Checks for file existence."""
+    global current_chat_file
     if current_chat_file:
-        with open(current_chat_file, "a", encoding="utf-8") as f:
-            f.write(text + "\n")
+        if os.path.exists(current_chat_file):
+            with open(current_chat_file, "a", encoding="utf-8") as f:
+                f.write(text + "\n")
+        else:
+            # File doesn't exist – trigger new chat behavior
+            await message.reply("❌ Чат-файл не найден. Пожалуйста, начните новый чат командой /startnewchat.")
+            current_chat_file = None  # Clear current_chat_file to avoid unexpected behavior
+    else:
+        await message.reply("❌  No active chat found. Please start a new chat using /startnewchat")
 
 async def save_selected_model(model_name):
     with open(SELECTED_MODEL_FILE, "w", encoding="utf-8") as f:
@@ -248,7 +256,7 @@ async def handle_messages(message: Message):
     # 📄 Если пришло текстовое сообщение
     user_message = message.text.strip()
     if user_message:
-        await append_to_chat_file(f"User: {user_message}")
+        await append_to_chat_file(message, f"User: {user_message}") # Pass message here
 
         # Используем `chat_with_gpt_file()` для диалога, `chat_with_gpt()` для одиночного ответа
         if current_chat_file:

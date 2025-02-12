@@ -1,7 +1,7 @@
 // content.js
 console.log("Google Meet Audio to ChatGPT content script loaded");
 
-// Добавляем индикатор записи в интерфейс Google Meet
+// Adding recording indicator to the Google Meet interface
 const indicator = document.createElement("div");
 indicator.id = "recording-indicator";
 indicator.style.position = "fixed";
@@ -15,7 +15,7 @@ indicator.style.display = "none";
 indicator.innerText = "Recording...";
 document.body.appendChild(indicator);
 
-// Слушаем сообщения от background.js
+// Listening for messages from background.js
 chrome.runtime.onMessage.addListener((message) => {
     if (message.action === "start_capture") {
         indicator.style.display = "block";
