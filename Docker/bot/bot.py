@@ -252,11 +252,7 @@ async def handle_messages(message: Message):
 
     # 📄 Если пришло текстовое сообщение
     user_message = message.text.strip()
-    # Читаем содержимое файла чата
-    if not current_chat_file:
-        return "❌ У вас нет нового чата. Запустите чат командой /startnewchat."
-
-    elif user_message:
+    if user_message:
         await append_to_chat_file(f"User: {user_message}")
 
         # Используем `chat_with_gpt_file()` для диалога, `chat_with_gpt()` для одиночного ответа
