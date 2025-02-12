@@ -66,11 +66,19 @@ async def create_new_chat_file(username: str) -> str:
     logger.info(f"✅ Новый файл чата создан: {chat_file}")
     return chat_file
 
-async def append_to_chat_file(text: str):
-    """Добавляет текст в текущий файл чата."""
-    if current_chat_file:
-        with open(current_chat_file, "a", encoding="utf-8") as f:
-            f.write(text + "\n")
+async def append_to_chat_file(username: str, text: str):
+    """Добавляет текст в файл чата пользователя."""
+    # Ищем последний (активный) файл чата пользователя
+    chat_files = sorted([f for f in os.listdir() if f.startswith(f"{username}-chat")], reverse=True)
+
+    if not chat_files:
+        return  # Если чатов нет, не записываем
+
+    chat_file = chat_files[0]  # Берем последний созданный чат
+
+    with open(chat_file, "a", encoding="utf-8") as f:
+        f.write(text + "\n")
+
 
 async def save_selected_model(username: str, model_name: str = DEFAULT_MODEL):
     """Сохраняет выбранную модель в файл пользователя, если модель не указана - записывает модель по умолчанию."""
@@ -271,10 +279,13 @@ async def handle_messages(message: Message):
     # Ищем файлы чатов пользователя
     chat_files = sorted([f for f in os.listdir() if f.startswith(f"{username}-chat")], reverse=True)
 
+    # Если у пользователя нет активного чата, он не может отправить сообщение
     if message.content_type == ContentType.TEXT and not chat_files:
         await message.answer("❌ У вас нет активного чата. Запустите новый чат командой /startnewchat.")
         return
 
+    # Определяем последний (активный) файл чата пользователя
+    chat_file = chat_files[0] if chat_files else None
 
     # 🎤 Если пришло голосовое сообщение
     if message.content_type == ContentType.VOICE:
@@ -296,11 +307,11 @@ async def handle_messages(message: Message):
             # 📢 Отправляем в чат расшифрованное сообщение
             await message.reply(f"🎙 Расшифрованный текст:\n{cleaned_text}")
 
-            # Записываем в файл чата
-            await append_to_chat_file(f"User: {cleaned_text}")
+            # Записываем в файл чата пользователя
+            await append_to_chat_file(username, f"User: {cleaned_text}")
 
             # Отправляем содержимое файла в GPT и получаем ответ
-            response = await chat_with_gpt_file()
+            response = await chat_with_gpt_file(message)
             await message.reply(response)
 
         return  # Завершаем обработку голосового сообщения
@@ -308,11 +319,11 @@ async def handle_messages(message: Message):
     # 📄 Если пришло текстовое сообщение
     user_message = message.text.strip()
     if user_message:
-        await append_to_chat_file(f"User: {user_message}")
+        await append_to_chat_file(username, f"User: {user_message}")
 
         # Используем `chat_with_gpt_file()` для диалога, `chat_with_gpt()` для одиночного ответа
-        if current_chat_file:
-            response = await chat_with_gpt_file()  # Диалог
+        if chat_file:
+            response = await chat_with_gpt_file(message)  # Диалог
         else:
             response = await chat_with_gpt(message)  # Одиночный ответ
 
