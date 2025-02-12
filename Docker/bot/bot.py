@@ -71,7 +71,6 @@ async def load_selected_model():
     return DEFAULT_MODEL
 
 # === Фильтрация сообщений ===
-
 def clean_transcribed_message(text: str) -> str:
     """Очищает текст от лишних элементов, оставляя только распознанное сообщение."""
     patterns_to_remove = [
@@ -213,7 +212,7 @@ async def handle_messages(message: Message):
     global current_chat_file
 
     # Если чат-файл не существует, и не была дана команда /startnewchat, игнорируем сообщение
-    if not current_chat_file and not message.get_command():
+    if message.content_type == ContentType.TEXT and not current_chat_file:
         await message.reply("❌ Пожалуйста, начните новый чат командой /startnewchat.")
         return
 
